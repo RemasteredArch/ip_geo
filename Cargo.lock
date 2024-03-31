@@ -3,5 +3,12 @@
 version = 3
 
 [[package]]
+name = "cli"
+version = "0.1.0"
+dependencies = [
+ "ip_geo",
+]
+
+[[package]]
 name = "ip_geo"
 version = "0.1.0"
