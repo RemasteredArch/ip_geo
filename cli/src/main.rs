@@ -1,3 +1,4 @@
+use celes::Country;
 use clap::Parser;
 use ip_geo::IpAddrMap;
 use serde::{
@@ -9,27 +10,47 @@ use std::{fmt::Display, fs, net::Ipv4Addr, path::Path, str::FromStr};
 fn main() {
     let arguments = get_config(Arguments::parse());
 
-    let ipv4_map: IpAddrMap<Ipv4Addr, String> = parse_ipv4_file(arguments.ipv4.unwrap());
+    let ipv4_map = parse_ipv4_file(arguments.ipv4_path.unwrap(), arguments.ipv4_len.unwrap());
 }
 
-fn parse_ipv4_file(path: Box<Path>) -> IpAddrMap<Ipv4Addr, String> {
+fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Country> {
+    #[derive(Deserialize, Debug)]
+    struct Data {
+        #[serde(deserialize_with = "deserialize_ipv4")]
+        start: Ipv4Addr,
+
+        #[serde(deserialize_with = "deserialize_ipv4")]
+        end: Ipv4Addr,
+
+        country: Country,
+    }
+
     let file = fs::File::open(&path)
         .unwrap_or_else(|_| panic!("Could not open IPv4 database at {}", path.to_string_lossy()));
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
+        .comment(Some(b'#'))
         .from_reader(file);
 
-    todo!()
+    let mut map = IpAddrMap::new_with_capacity(len);
+
+    for entry in reader.deserialize() {
+        let data: Data = entry.unwrap();
+
+        println!("{:?}", data);
+    }
+
+    map
 }
 
-fn deserialize_ip<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv4Addr, D::Error> {
+fn deserialize_ipv4<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv4Addr, D::Error> {
     pub struct Ipv4Deserializer;
 
     impl<'de> Visitor<'de> for Ipv4Deserializer {
         type Value = Ipv4Addr;
 
         fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(f, "an ipv4 address")
+            write!(f, "an IPv4 address")
         }
 
         fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
@@ -39,7 +60,7 @@ fn deserialize_ip<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv4Addr
             const MASK: u32 = 0xFF;
 
             let array = std::array::from_fn(|index| {
-                let shift = index * u8::BITS as usize;
+                let shift = (3 - index) * u8::BITS as usize;
 
                 (v >> shift & MASK) as u8
             });
@@ -55,7 +76,7 @@ fn deserialize_ip<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv4Addr
         }
     }
 
-    deserializer.deserialize_any(Ipv4Deserializer)
+    deserializer.deserialize_u32(Ipv4Deserializer)
 }
 
 #[derive(Parser, Deserialize)]
@@ -65,13 +86,21 @@ struct Arguments {
     #[serde(skip, default)]
     config: Option<Box<Path>>,
 
-    #[arg(short = '4', long = "IPv4")]
+    #[arg(short = '4', long = "IPv4-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    ipv4: Option<Box<Path>>,
+    ipv4_path: Option<Box<Path>>,
 
-    #[arg(short = '6', long = "IPv6")]
+    #[arg(long = "IPv4-length")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    ipv6: Option<Box<Path>>,
+    ipv4_len: Option<usize>,
+
+    #[arg(short = '6', long = "IPv6-path")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    ipv6_path: Option<Box<Path>>,
+
+    #[arg(long = "IPv6-length")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    ipv6_len: Option<usize>,
 
     #[arg(short = 's', long = "server")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -86,8 +115,8 @@ impl Display for Arguments {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Config:")?;
         writeln!(f, " * Config: {:?}", self.config)?;
-        writeln!(f, " * IPv4 DB: {:?}", self.ipv4)?;
-        writeln!(f, " * IPv6 DB: {:?}", self.ipv6)?;
+        writeln!(f, " * IPv4 DB: {:?}", self.ipv4_path)?;
+        writeln!(f, " * IPv6 DB: {:?}", self.ipv6_path)?;
         writeln!(f, " * Start as server: {:?}", self.server)?;
         writeln!(f, " * Server port: {:?}", self.port)
     }
@@ -101,15 +130,25 @@ fn get_config(arguments: Arguments) -> Arguments {
         .or_else(|| from_config.as_ref().and_then(|v| v.config.clone()))
         .unwrap_or_else(get_default_config_path);
 
-    let ipv4 = arguments
-        .ipv4
-        .or_else(|| from_config.as_ref().and_then(|v| v.ipv4.clone()))
+    let ipv4_path = arguments
+        .ipv4_path
+        .or_else(|| from_config.as_ref().and_then(|v| v.ipv4_path.clone()))
         .unwrap_or_else(|| Path::new("/usr/share/tor/geoip").into());
 
-    let ipv6 = arguments
-        .ipv6
-        .or_else(|| from_config.as_ref().and_then(|v| v.ipv6.clone()))
+    let ipv4_len = arguments
+        .ipv4_len
+        .or_else(|| from_config.as_ref().and_then(|v| v.ipv4_len))
+        .unwrap_or(200_000);
+
+    let ipv6_path = arguments
+        .ipv6_path
+        .or_else(|| from_config.as_ref().and_then(|v| v.ipv6_path.clone()))
         .unwrap_or_else(|| Path::new("/usr/share/tor/geoip6").into());
+
+    let ipv6_len = arguments
+        .ipv6_len
+        .or_else(|| from_config.as_ref().and_then(|v| v.ipv6_len))
+        .unwrap_or(60_000);
 
     let server = arguments
         .server
@@ -123,8 +162,10 @@ fn get_config(arguments: Arguments) -> Arguments {
 
     Arguments {
         config: Some(config),
-        ipv4: Some(ipv4),
-        ipv6: Some(ipv6),
+        ipv4_path: Some(ipv4_path),
+        ipv4_len: Some(ipv4_len),
+        ipv6_path: Some(ipv6_path),
+        ipv6_len: Some(ipv6_len),
         server: Some(server),
         port: Some(port),
     }
