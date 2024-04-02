@@ -1,7 +1,10 @@
 use clap::Parser;
 use ip_geo::IpAddrMap;
-use serde::Deserialize;
-use std::{fmt::Display, fs, net::Ipv4Addr, path::Path};
+use serde::{
+    de::{Unexpected, Visitor},
+    Deserialize, Deserializer,
+};
+use std::{fmt::Display, fs, net::Ipv4Addr, path::Path, str::FromStr};
 
 fn main() {
     let arguments = get_config(Arguments::parse());
@@ -17,6 +20,42 @@ fn parse_ipv4_file(path: Box<Path>) -> IpAddrMap<Ipv4Addr, String> {
         .from_reader(file);
 
     todo!()
+}
+
+fn deserialize_ip<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv4Addr, D::Error> {
+    pub struct Ipv4Deserializer;
+
+    impl<'de> Visitor<'de> for Ipv4Deserializer {
+        type Value = Ipv4Addr;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "an ipv4 address")
+        }
+
+        fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            const MASK: u32 = 0xFF;
+
+            let array = std::array::from_fn(|index| {
+                let shift = index * u8::BITS as usize;
+
+                (v >> shift & MASK) as u8
+            });
+
+            Ok(array.into())
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ipv4Addr::from_str(v).map_err(|_| E::invalid_value(Unexpected::Str(v), &self))
+        }
+    }
+
+    deserializer.deserialize_any(Ipv4Deserializer)
 }
 
 #[derive(Parser, Deserialize)]
