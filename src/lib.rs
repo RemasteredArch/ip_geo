@@ -62,6 +62,16 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
     }
 }
 
+impl<A: Ord + Copy, T: PartialEq> IntoIterator for IpAddrMap<A, T> {
+    type Item = IpAddrEntry<A, T>;
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.inner.into_iter()
+    }
+}
+
 pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 

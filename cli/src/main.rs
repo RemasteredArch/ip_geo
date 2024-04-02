@@ -1,6 +1,6 @@
 use celes::Country;
 use clap::Parser;
-use ip_geo::IpAddrMap;
+use ip_geo::{IpAddrEntry, IpAddrMap, Ipv4AddrEntry};
 use serde::{
     de::{Unexpected, Visitor},
     Deserialize, Deserializer,
@@ -11,11 +11,15 @@ fn main() {
     let arguments = get_config(Arguments::parse());
 
     let ipv4_map = parse_ipv4_file(arguments.ipv4_path.unwrap(), arguments.ipv4_len.unwrap());
+
+    for ipv4_addr in ipv4_map {
+        println!("{:?}", ipv4_addr);
+    }
 }
 
 fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Country> {
     #[derive(Deserialize, Debug)]
-    struct Data {
+    struct Schema {
         #[serde(deserialize_with = "deserialize_ipv4")]
         start: Ipv4Addr,
 
@@ -35,10 +39,14 @@ fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Country> 
     let mut map = IpAddrMap::new_with_capacity(len);
 
     for entry in reader.deserialize() {
-        let data: Data = entry.unwrap();
+        let data: Schema = entry.unwrap();
 
-        println!("{:?}", data);
+        let entry = Ipv4AddrEntry::new(data.start, data.end, data.country).unwrap();
+
+        map.insert(entry);
     }
+
+    map.cleanup();
 
     map
 }
@@ -82,10 +90,11 @@ fn deserialize_ipv4<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv4Ad
 #[derive(Parser, Deserialize)]
 #[command(about, version, long_about = None)]
 struct Arguments {
-    #[arg(short = 'f', long = "config-file")]
+    #[arg(short = 'f', long = "config-path")]
     #[serde(skip, default)]
-    config: Option<Box<Path>>,
+    config_path: Option<Box<Path>>,
 
+    // TODO: add args to configure the comment character of the DBs (e.g. # for tor_geoip)
     #[arg(short = '4', long = "IPv4-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     ipv4_path: Option<Box<Path>>,
@@ -114,7 +123,7 @@ struct Arguments {
 impl Display for Arguments {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Config:")?;
-        writeln!(f, " * Config: {:?}", self.config)?;
+        writeln!(f, " * Config: {:?}", self.config_path)?;
         writeln!(f, " * IPv4 DB: {:?}", self.ipv4_path)?;
         writeln!(f, " * IPv6 DB: {:?}", self.ipv6_path)?;
         writeln!(f, " * Start as server: {:?}", self.server)?;
@@ -126,8 +135,8 @@ fn get_config(arguments: Arguments) -> Arguments {
     let from_config = get_config_file_arguments(&arguments).and_then(|v| v.ok());
 
     let config = arguments
-        .config
-        .or_else(|| from_config.as_ref().and_then(|v| v.config.clone()))
+        .config_path
+        .or_else(|| from_config.as_ref().and_then(|v| v.config_path.clone()))
         .unwrap_or_else(get_default_config_path);
 
     let ipv4_path = arguments
@@ -161,7 +170,7 @@ fn get_config(arguments: Arguments) -> Arguments {
         .unwrap_or(26_000);
 
     Arguments {
-        config: Some(config),
+        config_path: Some(config),
         ipv4_path: Some(ipv4_path),
         ipv4_len: Some(ipv4_len),
         ipv6_path: Some(ipv6_path),
@@ -173,7 +182,7 @@ fn get_config(arguments: Arguments) -> Arguments {
 
 fn get_config_file_arguments(arguments: &Arguments) -> Option<Result<Arguments, toml::de::Error>> {
     let config_path = arguments
-        .config
+        .config_path
         .clone()
         .unwrap_or_else(get_default_config_path);
 
