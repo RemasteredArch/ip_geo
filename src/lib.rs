@@ -91,6 +91,22 @@ impl<A: Ord + Copy, T> IpAddrEntry<A, T> {
         }
     }
 
+    pub const fn start(&self) -> &A {
+        &self.start
+    }
+
+    pub fn start_mut(&mut self) -> &mut A {
+        &mut self.start
+    }
+
+    pub const fn end(&self) -> &A {
+        &self.end
+    }
+
+    pub fn end_mut(&mut self) -> &mut A {
+        &mut self.end
+    }
+
     pub const fn value(&self) -> &T {
         &self.value
     }
