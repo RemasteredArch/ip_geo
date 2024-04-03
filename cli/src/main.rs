@@ -17,14 +17,13 @@ use std::{
 fn main() {
     let arguments = get_config(Arguments::parse());
 
-    /*
-    let ipv4_map = parse_ipv4_file(arguments.ipv4_path.unwrap(), arguments.ipv4_len.unwrap());
+    let mut ipv4_map = parse_ipv4_file(arguments.ipv4_path.unwrap(), arguments.ipv4_len.unwrap());
 
     for ipv4_addr in ipv4_map {
         println!("{:?}", ipv4_addr);
-    }*/
+    }
 
-    let ipv6_map = parse_ipv6_file(arguments.ipv6_path.unwrap(), arguments.ipv6_len.unwrap());
+    let mut ipv6_map = parse_ipv6_file(arguments.ipv6_path.unwrap(), arguments.ipv6_len.unwrap());
 
     for ipv6_addr in ipv6_map {
         println!(
@@ -34,6 +33,11 @@ fn main() {
             ipv6_addr.value().long_name
         );
     }
+
+    let input_addr = arguments.ipv4_addr.unwrap();
+    println!("{}", input_addr);
+
+    //println!("{}", ipv4_map.search(input_addr).unwrap().long_name);
 }
 
 fn parse_ipv6_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv6Addr, Country> {
@@ -183,8 +187,11 @@ struct Arguments {
     #[serde(skip, default)]
     config_path: Option<Box<Path>>,
 
-    // TODO: add args to configure the comment character of the DBs (e.g. # for tor_geoip)
-    #[arg(short = '4', long = "IPv4-path")]
+    #[arg(short = '4', long = "IPv4-addr")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    ipv4_addr: Option<Ipv4Addr>,
+
+    #[arg(long = "IPv4-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     ipv4_path: Option<Box<Path>>,
 
@@ -192,13 +199,25 @@ struct Arguments {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     ipv4_len: Option<usize>,
 
-    #[arg(short = '6', long = "IPv6-path")]
+    #[arg(long = "IPv4-comment")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    ipv4_comment: Option<char>,
+
+    #[arg(short = '6', long = "IPv6-addr")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    ipv6_addr: Option<Ipv6Addr>,
+
+    #[arg(long = "IPv6-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     ipv6_path: Option<Box<Path>>,
 
     #[arg(long = "IPv6-length")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     ipv6_len: Option<usize>,
+
+    #[arg(long = "IPv6-comment")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    ipv6_comment: Option<char>,
 
     #[arg(short = 's', long = "server")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -223,6 +242,7 @@ impl Display for Arguments {
 fn get_config(arguments: Arguments) -> Arguments {
     let from_config = get_config_file_arguments(&arguments).and_then(|v| v.ok());
 
+    // does this need to be read from config file?
     let config = arguments
         .config_path
         .or_else(|| from_config.as_ref().and_then(|v| v.config_path.clone()))
@@ -230,13 +250,17 @@ fn get_config(arguments: Arguments) -> Arguments {
 
     let ipv4_path = arguments
         .ipv4_path
-        .or_else(|| from_config.as_ref().and_then(|v| v.ipv4_path.clone()))
         .unwrap_or_else(|| Path::new("/usr/share/tor/geoip").into());
 
     let ipv4_len = arguments
         .ipv4_len
         .or_else(|| from_config.as_ref().and_then(|v| v.ipv4_len))
         .unwrap_or(200_000);
+
+    let ipv4_comment = arguments
+        .ipv4_comment
+        .or_else(|| from_config.as_ref().and_then(|v| v.ipv4_comment))
+        .unwrap_or('#');
 
     let ipv6_path = arguments
         .ipv6_path
@@ -247,6 +271,11 @@ fn get_config(arguments: Arguments) -> Arguments {
         .ipv6_len
         .or_else(|| from_config.as_ref().and_then(|v| v.ipv6_len))
         .unwrap_or(60_000);
+
+    let ipv6_comment = arguments
+        .ipv6_comment
+        .or_else(|| from_config.as_ref().and_then(|v| v.ipv6_comment))
+        .unwrap_or('#');
 
     let server = arguments
         .server
@@ -260,10 +289,14 @@ fn get_config(arguments: Arguments) -> Arguments {
 
     Arguments {
         config_path: Some(config),
+        ipv4_addr: arguments.ipv4_addr,
         ipv4_path: Some(ipv4_path),
         ipv4_len: Some(ipv4_len),
+        ipv4_comment: Some(ipv4_comment),
+        ipv6_addr: arguments.ipv6_addr,
         ipv6_path: Some(ipv6_path),
         ipv6_len: Some(ipv6_len),
+        ipv6_comment: Some(ipv6_comment),
         server: Some(server),
         port: Some(port),
     }
