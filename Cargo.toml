@@ -10,3 +10,5 @@ license = "AGPL-3.0-or-later"
 members = ["cli"]
 
 [dependencies]
+either = { version = "1.13.0", features = ["serde"] }
+serde = { version = "1.0.204", features = ["derive"] }
