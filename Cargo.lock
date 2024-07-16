@@ -211,6 +211,8 @@ dependencies = [
 name = "ip_geo"
 version = "0.1.0"
 dependencies = [
+ "celes",
+ "csv",
  "either",
  "serde",
 ]

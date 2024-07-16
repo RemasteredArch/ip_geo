@@ -1,12 +1,21 @@
 #![allow(dead_code)]
 
+use celes::Country;
 use core::fmt;
+use either::Either;
+use serde::{
+    de::{Unexpected, Visitor},
+    Deserialize, Deserializer,
+};
 use std::{
     cmp::Ordering,
     error::Error,
     fmt::Display,
+    fs,
     net::{Ipv4Addr, Ipv6Addr},
     ops::RangeInclusive,
+    path::Path,
+    str::FromStr,
 };
 
 pub struct IpAddrMap<A: Ord + Copy, T: PartialEq> {
@@ -158,4 +167,158 @@ impl Display for EmptyRangeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "the given range is empty")
     }
+}
+
+pub fn parse_ipv6_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv6Addr, Country> {
+    #[derive(Deserialize, Debug)]
+    struct Schema {
+        #[serde(deserialize_with = "deserialize_ipv6")]
+        start: Ipv6Addr,
+
+        #[serde(deserialize_with = "deserialize_ipv6")]
+        end: Ipv6Addr,
+
+        #[serde(with = "either::serde_untagged")]
+        country: Either<Country, String>,
+    }
+
+    let file = fs::File::open(&path)
+        .unwrap_or_else(|_| panic!("Could not open IPv6 database at {}", path.to_string_lossy()));
+    let mut reader = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .comment(Some(b'#'))
+        .from_reader(file);
+
+    let mut map = IpAddrMap::new_with_capacity(len);
+
+    for entry in reader.deserialize() {
+        let data: Schema = entry.unwrap();
+
+        let country = match data.country {
+            Either::Left(country) => country,
+            Either::Right(unrecognized) => {
+                eprintln!("Unrecognized country or region '{unrecognized}'!");
+                continue;
+            }
+        };
+
+        map.insert(Ipv6AddrEntry::new(data.start, data.end, country).unwrap());
+    }
+
+    map.cleanup();
+
+    map
+}
+
+fn deserialize_ipv6<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv6Addr, D::Error> {
+    pub struct Ipv6Deserializer;
+
+    impl<'de> Visitor<'de> for Ipv6Deserializer {
+        type Value = Ipv6Addr;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "an IPv6 address")
+        }
+
+        fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            const MASK: u128 = 0xFF;
+
+            let array = std::array::from_fn(|index| {
+                let shift = (7 - index) * u16::BITS as usize;
+
+                (v >> shift & MASK) as u16
+            });
+
+            Ok(array.into())
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ipv6Addr::from_str(v).map_err(|_| E::invalid_value(Unexpected::Str(v), &self))
+        }
+    }
+
+    deserializer.deserialize_str(Ipv6Deserializer)
+}
+
+pub fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Country> {
+    #[derive(Deserialize, Debug)]
+    struct Schema {
+        #[serde(deserialize_with = "deserialize_ipv4")]
+        start: Ipv4Addr,
+
+        #[serde(deserialize_with = "deserialize_ipv4")]
+        end: Ipv4Addr,
+
+        #[serde(with = "either::serde_untagged")]
+        country: Either<Country, String>,
+    }
+
+    let file = fs::File::open(&path)
+        .unwrap_or_else(|_| panic!("Could not open IPv4 database at {}", path.to_string_lossy()));
+    let mut reader = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .comment(Some(b'#'))
+        .from_reader(file);
+
+    let mut map = IpAddrMap::new_with_capacity(len);
+
+    for entry in reader.deserialize() {
+        let data: Schema = entry.unwrap();
+
+        let country = match data.country {
+            Either::Left(country) => country,
+            Either::Right(unrecognized) => {
+                eprintln!("Unrecognized country or region '{unrecognized}'!");
+                continue;
+            }
+        };
+
+        map.insert(Ipv4AddrEntry::new(data.start, data.end, country).unwrap());
+    }
+
+    map.cleanup();
+
+    map
+}
+
+fn deserialize_ipv4<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv4Addr, D::Error> {
+    pub struct Ipv4Deserializer;
+
+    impl<'de> Visitor<'de> for Ipv4Deserializer {
+        type Value = Ipv4Addr;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "an IPv4 address")
+        }
+
+        fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            const MASK: u32 = 0xFF;
+
+            let array = std::array::from_fn(|index| {
+                let shift = (3 - index) * u8::BITS as usize;
+
+                (v >> shift & MASK) as u8
+            });
+
+            Ok(array.into())
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ipv4Addr::from_str(v).map_err(|_| E::invalid_value(Unexpected::Str(v), &self))
+        }
+    }
+
+    deserializer.deserialize_u32(Ipv4Deserializer)
 }
