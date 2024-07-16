@@ -62,6 +62,12 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
     }
 }
 
+impl<A: Ord + Copy, T: PartialEq> Default for IpAddrMap<A, T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<A: Ord + Copy, T: PartialEq> IntoIterator for IpAddrMap<A, T> {
     type Item = IpAddrEntry<A, T>;
 
