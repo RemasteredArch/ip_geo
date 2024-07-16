@@ -18,6 +18,7 @@ use std::{
     str::FromStr,
 };
 
+#[derive(Debug)]
 pub struct IpAddrMap<A: Ord + Copy, T: PartialEq> {
     inner: Vec<IpAddrEntry<A, T>>,
     dirty: bool,
@@ -90,6 +91,20 @@ impl<A: Ord + Copy, T: PartialEq> IntoIterator for IpAddrMap<A, T> {
 pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 
+/// Example usage:
+///
+/// ```
+/// let entry = Ipv4AddrEntry::new(
+///     Ipv4Addr::new(1, 0, 0, 0),
+///     Ipv4Addr::new(2, 2, 2, 2),
+///     "contents",
+/// )
+/// .unwrap();
+///
+/// assert!(entry < Ipv4Addr::new(0, 0, 0, 0));
+/// assert!(entry == Ipv4Addr::new(1, 1, 1, 1));
+/// assert!(entry > Ipv4Addr::new(3, 3, 3, 3));
+/// ```
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct IpAddrEntry<A: Ord + Copy, T> {
     start: A,

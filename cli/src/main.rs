@@ -1,5 +1,7 @@
 #![allow(dead_code)]
+
 use clap::Parser;
+#[allow(unused_imports)]
 use ip_geo::{parse_ipv4_file, parse_ipv6_file};
 use serde::Deserialize;
 use std::{
@@ -12,27 +14,25 @@ use std::{
 fn main() {
     let arguments = get_config(Arguments::parse());
 
-    let mut ipv4_map = parse_ipv4_file(arguments.ipv4_path.unwrap(), arguments.ipv4_len.unwrap());
+    let mut ipv4_map = parse_ipv4_file(
+        arguments
+            .ipv4_path
+            .expect("A valid path to an IPv4 GeoIP database"),
+        arguments
+            .ipv4_len
+            .expect("The number of lines in the IPv4 GeoIP database"),
+    );
 
-    for ipv4_addr in ipv4_map {
-        println!("{:?}", ipv4_addr);
-    }
-
-    let mut ipv6_map = parse_ipv6_file(arguments.ipv6_path.unwrap(), arguments.ipv6_len.unwrap());
-
-    for ipv6_addr in ipv6_map {
-        println!(
-            "{:39}\t{:39}\t{}",
-            ipv6_addr.start(),
-            ipv6_addr.end(),
-            ipv6_addr.value().long_name
-        );
-    }
-
-    let input_addr = arguments.ipv4_addr.unwrap();
+    let input_addr = arguments.ipv4_addr.expect("A valid IPv4 Address");
     println!("{}", input_addr);
 
-    //println!("{}", ipv4_map.search(input_addr).unwrap().long_name);
+    if let Some(result) = ipv4_map.search(input_addr) {
+        println!("{}", result.long_name);
+    } else {
+        println!("No match!");
+    }
+
+    dbg!(ipv4_map);
 }
 
 #[derive(Parser, Deserialize)]
