@@ -60,7 +60,8 @@ fn find_ipv4(arguments: Arguments) {
     dbg!(input_addr);
 
     if let Some(result) = ipv4_map.search(input_addr) {
-        dbg!(result.long_name);
+        dbg!(result);
+        println!("{}", result.long_name);
     } else {
         println!("No match!");
     }
@@ -82,7 +83,8 @@ fn find_ipv6(arguments: Arguments) {
     dbg!(input_addr);
 
     if let Some(result) = ipv6_map.search(input_addr) {
-        dbg!(result.long_name);
+        dbg!(result);
+        println!("{}", result.long_name);
     } else {
         println!("No match!");
     }
