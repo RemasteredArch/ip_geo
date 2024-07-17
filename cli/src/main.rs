@@ -11,9 +11,27 @@ use std::{
     path::Path,
 };
 
+enum RunType {
+    Server,
+    Ipv4,
+    Ipv6,
+}
+
 fn main() {
     let arguments = get_config(Arguments::parse());
 
+    match get_run_type(&arguments) {
+        RunType::Server => launch_server(arguments),
+        RunType::Ipv4 => find_ipv4(arguments),
+        RunType::Ipv6 => find_ipv6(arguments),
+    }
+}
+
+fn get_run_type(arguments: &Arguments) -> RunType {
+    RunType::Ipv4
+}
+
+fn find_ipv4(arguments: Arguments) {
     let mut ipv4_map = parse_ipv4_file(
         arguments
             .ipv4_path
@@ -24,15 +42,23 @@ fn main() {
     );
 
     let input_addr = arguments.ipv4_addr.expect("A valid IPv4 Address");
-    println!("{}", input_addr);
+    dbg!(input_addr);
 
     if let Some(result) = ipv4_map.search(input_addr) {
-        println!("{}", result.long_name);
+        dbg!(result.long_name);
     } else {
         println!("No match!");
     }
 
-    dbg!(ipv4_map);
+    // dbg!(ipv4_map);
+}
+
+fn find_ipv6(arguments: Arguments) {
+    todo!();
+}
+
+fn launch_server(arguments: Arguments) {
+    todo!();
 }
 
 #[derive(Parser, Deserialize)]

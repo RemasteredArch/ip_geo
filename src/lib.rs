@@ -47,10 +47,15 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
     pub fn search(&mut self, address: A) -> Option<&T> {
         self.cleanup();
 
-        self.inner
-            .binary_search_by(|e| e.partial_cmp(&address).unwrap())
-            .ok()
-            .map(|i| self.inner[i].value())
+        Some(
+            self.inner[self
+                .inner
+                .binary_search_by(|e| e.partial_cmp(&address).unwrap())
+                .unwrap()]
+            .value(),
+        )
+        //.ok()
+        //.map(|i| self.inner[i].value())
     }
 
     pub fn cleanup(&mut self) {
@@ -61,6 +66,10 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
                                         // adding to the map
             self.dirty = false;
         }
+    }
+
+    pub fn get_index_as_ref(&self, index: usize) -> &IpAddrEntry<A, T> {
+        &self.inner[index]
     }
 
     pub fn len(&self) -> usize {
@@ -101,9 +110,9 @@ pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 /// )
 /// .unwrap();
 ///
-/// assert!(entry < Ipv4Addr::new(0, 0, 0, 0));
+/// assert!(entry > Ipv4Addr::new(0, 0, 0, 0));
 /// assert!(entry == Ipv4Addr::new(1, 1, 1, 1));
-/// assert!(entry > Ipv4Addr::new(3, 3, 3, 3));
+/// assert!(entry < Ipv4Addr::new(3, 3, 3, 3));
 /// ```
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct IpAddrEntry<A: Ord + Copy, T> {
@@ -165,8 +174,8 @@ impl<A: Ord + Copy, T> PartialEq<A> for IpAddrEntry<A, T> {
 impl<A: Ord + Copy, T> PartialOrd<A> for IpAddrEntry<A, T> {
     fn partial_cmp(&self, other: &A) -> Option<std::cmp::Ordering> {
         match other {
-            v if v < &self.start => Some(Ordering::Less),
-            v if v > &self.end => Some(Ordering::Greater),
+            v if v > &self.end => Some(Ordering::Less),
+            v if v < &self.start => Some(Ordering::Greater),
             v if self == v => Some(Ordering::Equal),
             _ => unreachable!(),
         }
