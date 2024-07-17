@@ -47,15 +47,19 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
     pub fn search(&mut self, address: A) -> Option<&T> {
         self.cleanup();
 
-        Some(
-            self.inner[self
-                .inner
-                .binary_search_by(|e| e.partial_cmp(&address).unwrap())
-                .unwrap()]
-            .value(),
-        )
-        //.ok()
-        //.map(|i| self.inner[i].value())
+        let index = self
+            .inner
+            .binary_search_by(|e| e.partial_cmp(&address).unwrap())
+            .ok()?;
+
+        Some(self.inner[index].value())
+
+        /* Alternative syntax:
+        self.inner
+            .binary_search_by(|e| e.partial_cmp(&address).unwrap())
+            .ok()
+            .map(|i| self.inner[i].value())
+        */
     }
 
     pub fn cleanup(&mut self) {

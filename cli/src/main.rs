@@ -226,7 +226,7 @@ fn get_config_file_arguments(arguments: &Arguments) -> Option<Result<Arguments, 
 
 fn get_default_config_path() -> Box<Path> {
     dirs::config_dir()
-        .unwrap()
+        .expect("An OS-specific config directory")
         .join(env!("CARGO_PKG_NAME"))
         .with_extension("toml")
         .into_boxed_path()
