@@ -65,8 +65,6 @@ fn find_ipv4(arguments: Arguments) {
     } else {
         println!("No match!");
     }
-
-    // dbg!(ipv4_map);
 }
 
 fn find_ipv6(arguments: Arguments) {
@@ -91,7 +89,7 @@ fn find_ipv6(arguments: Arguments) {
 }
 
 fn launch_server(arguments: Arguments) {
-    todo!();
+    todo!("Implement the server functionality");
 }
 
 #[derive(Parser, Deserialize)]
