@@ -112,7 +112,7 @@ WHERE
 
     SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } # Or "[AUTO_LANGUAGE],en"
 }
-# LIMIT 300 # Should only return ~250 results, so no limit necessary
+# LIMIT 300 # Should only return ~180 results, so no limit necessary
 "#;
 
     let result = wikidata_query(query).expect("The result of a Wikidata Query");
