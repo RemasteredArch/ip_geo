@@ -15,21 +15,28 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use std::{str::FromStr, string::ParseError};
+use std::str::FromStr;
 
 use mediawiki::{reqwest::Url, ApiSync, MediaWikiError};
 use serde_json::Value;
+use url::ParseError;
 
 #[derive(thiserror::Error, Debug)]
 enum Error {
     #[error(transparent)]
     Url(#[from] ParseError),
+    #[error("can't split url")]
+    UrlSplit,
     #[error(transparent)]
     Wiki(#[from] MediaWikiError),
+    #[error("iterator operation failed")]
+    Iter,
     #[error("can't map value to object")]
     InvalidObject,
     #[error("can't map value to array")]
     InvalidArray,
+    #[error("map convert value to string")]
+    InvalidString,
     #[error("missing results in response")]
     MissingResults,
     #[error("missing binding in value")]
@@ -66,16 +73,33 @@ impl Country {
     }
 
     fn new_from_query(country_result: Value) -> Result<Self, Error> {
-        let url_str = get_value(&country_result, "country")?.as_str()?; // throw invalid string
+        let url_str = get_value(&country_result, "country")?
+            .as_str()
+            .ok_or(Error::InvalidString)?; // throw invalid string
 
         let id_url = Some(Url::from_str(url_str)?);
-        let id = Some(id_url.clone()?.path_segments()?.last()?.into());
+        let id = Some(
+            id_url
+                .clone()
+                .unwrap()
+                .path_segments()
+                .ok_or(Error::UrlSplit)?
+                .last()
+                .ok_or(Error::Iter)?
+                .into(),
+        );
 
-        let country = get_value(&country_result, "countryLabel")?.as_str()?.into();
+        let country = get_value(&country_result, "countryLabel")?
+            .as_str()
+            .ok_or(Error::InvalidString)?
+            .into();
 
-        let code = get_value(&country_result, "code")?.as_str()?.into();
+        let code = get_value(&country_result, "code")?
+            .as_str()
+            .ok_or(Error::InvalidString)?
+            .into();
 
-        Some(Self {
+        Ok(Self {
             id,
             id_url,
             country,
