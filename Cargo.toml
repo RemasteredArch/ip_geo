@@ -7,7 +7,7 @@ repository = "https://github.com/RemasteredArch/ip_geo/"
 license = "AGPL-3.0-or-later"
 
 [workspace]
-members = ["cli"]
+members = ["cli", "geo"]
 
 [dependencies]
 celes = "2.4.0"

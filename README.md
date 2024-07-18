@@ -5,6 +5,8 @@ IP geolocation, designed for [Grafana](https://grafana.com/oss/grafana/) [Geomap
 This directory only includes the library that parses and searches the [Tor IP geolocation databases](https://packages.ubuntu.com/noble/tor-geoipdb).\
 See [`cli/`](./cli/) for the actual command line utility and server.
 
+[`geo/`](./geo/) is a Crate for deserializing country codes based on data sourced from Wikidata.
+
 # License
 
 IP Geo is licensed under the GNU Affero General Public License version 3, or (at your option) any later version.
