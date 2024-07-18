@@ -30,7 +30,7 @@ enum Error {
     #[error(transparent)]
     Wiki(#[from] MediaWikiError),
     #[error("iterator operation failed")]
-    Iter,
+    Iter, // Could probably be more specific
     #[error("can't map value to object")]
     InvalidObject,
     #[error("can't map value to array")]
@@ -73,9 +73,7 @@ impl Country {
     }
 
     fn new_from_query(country_result: Value) -> Result<Self, Error> {
-        let url_str = get_value(&country_result, "country")?
-            .as_str()
-            .ok_or(Error::InvalidString)?; // throw invalid string
+        let url_str = get_str_value(&country_result, "country")?;
 
         let id_url = Some(Url::from_str(url_str)?);
         let id = Some(
@@ -89,15 +87,8 @@ impl Country {
                 .into(),
         );
 
-        let country = get_value(&country_result, "countryLabel")?
-            .as_str()
-            .ok_or(Error::InvalidString)?
-            .into();
-
-        let code = get_value(&country_result, "code")?
-            .as_str()
-            .ok_or(Error::InvalidString)?
-            .into();
+        let country = get_str_value(&country_result, "countryLabel")?.into();
+        let code = get_str_value(&country_result, "code")?.into();
 
         Ok(Self {
             id,
@@ -121,7 +112,7 @@ WHERE
 
     SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } # Or "[AUTO_LANGUAGE],en"
 }
-# LIMIT 300
+# LIMIT 300 # Should only return ~250 results, so no limit necessary
 "#;
 
     let result = wikidata_query(query).expect("The result of a Wikidata Query");
@@ -136,6 +127,12 @@ WHERE
     countries.dedup_by_key(|c| c.code.clone());
 
     countries.into_boxed_slice()
+}
+
+fn get_str_value<'st>(result: &'st Value, label: &str) -> Result<&'st str, Error> {
+    get_value(result, label)?
+        .as_str()
+        .ok_or(Error::InvalidString)
 }
 
 fn get_value<'st>(result: &'st Value, label: &str) -> Result<&'st Value, Error> {
