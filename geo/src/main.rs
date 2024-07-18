@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-#![allow(dead_code)]
-
 use std::str::FromStr;
 
 use mediawiki::{reqwest::Url, ApiSync};
@@ -24,25 +22,16 @@ use serde_json::Value;
 
 fn main() {
     let mut additional_countries = vec![
-        Country {
-            id: None,
-            id_url: None,
-            country: "African Regional Intellectual Property Organization".to_string(),
-            code: "AP".to_string(),
-        },
-        Country {
-            id: None,
-            id_url: None,
-            country: "Serbia and Montenegro".to_string(),
-            code: "CS".to_string(),
-        },
+        Country::new_without_id("AP", "African Regional Intellectual Property Organization"),
+        Country::new_without_id("CS", "Serbia and Montenegro"),
     ];
-    let countries_query = get_country_list(&mut additional_countries);
+    let countries = get_country_list(&mut additional_countries);
 
-    dbg!(countries_query);
+    dbg!(countries);
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct Country {
     id: Option<String>,  // Ex. Q31
     id_url: Option<Url>, // Ex. http://www.wikidata.org/entity/Q31
@@ -51,43 +40,33 @@ struct Country {
 }
 
 impl Country {
-    fn new_from_query(country_result: Value) -> Self {
-        let url_str = get_value(&country_result, "country")
-            .unwrap()
-            .as_str()
-            .unwrap();
-
-        let id_url = Some(Url::from_str(url_str).unwrap());
-        let id = Some(
-            id_url
-                .clone()
-                .unwrap()
-                .path_segments()
-                .unwrap()
-                .last()
-                .unwrap()
-                .to_owned(),
-        );
-
-        let country = get_value(&country_result, "countryLabel")
-            .unwrap()
-            .as_str()
-            .unwrap()
-            .to_string();
-
-        let code = get_value(&country_result, "code")
-            .unwrap()
-            .as_str()
-            .unwrap()
-            .to_string();
-
-        // val.as_object().unwrap().clone(),
+    fn new_without_id(code: &str, name: &str) -> Self {
         Self {
+            id: None,
+            id_url: None,
+            country: name.to_string(),
+            code: code.to_string(),
+        }
+    }
+
+    fn new_from_query(country_result: Value) -> Option<Self> {
+        let url_str = get_value(&country_result, "country")?.as_str()?;
+
+        let id_url = Some(Url::from_str(url_str).ok()?);
+        let id = Some(id_url.clone()?.path_segments()?.last()?.to_owned());
+
+        let country = get_value(&country_result, "countryLabel")?
+            .as_str()?
+            .to_string();
+
+        let code = get_value(&country_result, "code")?.as_str()?.to_string();
+
+        Some(Self {
             id,
             id_url,
             country,
             code,
-        }
+        })
     }
 }
 
@@ -112,7 +91,7 @@ WHERE
     let mut countries = Vec::with_capacity(result.len() + additional_countries.len());
 
     for country in result {
-        countries.push(Country::new_from_query(country));
+        countries.push(Country::new_from_query(country).unwrap());
     }
 
     countries.append(additional_countries);
