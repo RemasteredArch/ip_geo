@@ -17,27 +17,81 @@
 
 #![allow(dead_code)]
 
-use mediawiki::{reqwest::Url, ApiSync, MediaWikiError};
+use std::str::FromStr;
+
+use mediawiki::{reqwest::Url, ApiSync};
 use serde_json::Value;
 
 fn main() {
-    get_country_list();
+    let mut additional_countries = vec![
+        Country {
+            id: None,
+            id_url: None,
+            country: "African Regional Intellectual Property Organization".to_string(),
+            code: "AP".to_string(),
+        },
+        Country {
+            id: None,
+            id_url: None,
+            country: "Serbia and Montenegro".to_string(),
+            code: "CS".to_string(),
+        },
+    ];
+    let countries_query = get_country_list(&mut additional_countries);
+
+    dbg!(countries_query);
 }
 
+#[derive(Debug)]
 struct Country {
-    id: String,      // Ex. Q31
-    id_url: Url,     // Ex. http://www.wikidata.org/entity/Q31
-    country: String, // Ex. Belgium
-    code: String,    // Ex. BE
+    id: Option<String>,  // Ex. Q31
+    id_url: Option<Url>, // Ex. http://www.wikidata.org/entity/Q31
+    country: String,     // Ex. Belgium
+    code: String,        // Ex. BE
 }
 
 impl Country {
-    fn new_from_query() -> Self {
-        todo!();
+    fn new_from_query(country_result: Value) -> Self {
+        let url_str = get_value(&country_result, "country")
+            .unwrap()
+            .as_str()
+            .unwrap();
+
+        let id_url = Some(Url::from_str(url_str).unwrap());
+        let id = Some(
+            id_url
+                .clone()
+                .unwrap()
+                .path_segments()
+                .unwrap()
+                .last()
+                .unwrap()
+                .to_owned(),
+        );
+
+        let country = get_value(&country_result, "countryLabel")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let code = get_value(&country_result, "code")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        // val.as_object().unwrap().clone(),
+        Self {
+            id,
+            id_url,
+            country,
+            code,
+        }
     }
 }
 
-fn get_country_list() {
+fn get_country_list(additional_countries: &mut Vec<Country>) -> Vec<Country> {
     let query = r#"
 SELECT
     ?country      # Ex. http://www.wikidata.org/entity/Q31
@@ -53,11 +107,18 @@ WHERE
 # LIMIT 300
 "#;
 
-    let wikidata_query = wikidata_query(query).expect("The result of a Wikidata Query");
+    let result = wikidata_query(query).expect("The result of a Wikidata Query");
 
-    dbg!(wikidata_query);
+    let mut countries = Vec::with_capacity(result.len() + additional_countries.len());
 
-    //dbg!(get_value(&result[0], "code"));
+    for country in result {
+        countries.push(Country::new_from_query(country));
+    }
+
+    countries.append(additional_countries);
+    countries.dedup_by_key(|c| c.code.clone());
+
+    countries
 }
 
 fn get_value<'st>(result: &'st Value, label: &'st str) -> Option<&'st Value> {
