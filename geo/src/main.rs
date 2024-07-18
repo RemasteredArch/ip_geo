@@ -15,10 +15,26 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use std::str::FromStr;
+use std::{str::FromStr, string::ParseError};
 
-use mediawiki::{reqwest::Url, ApiSync};
+use mediawiki::{reqwest::Url, ApiSync, MediaWikiError};
 use serde_json::Value;
+
+#[derive(thiserror::Error, Debug)]
+enum Error {
+    #[error(transparent)]
+    Url(#[from] ParseError),
+    #[error(transparent)]
+    Wiki(#[from] MediaWikiError),
+    #[error("can't map value to object")]
+    InvalidObject,
+    #[error("can't map value to array")]
+    InvalidArray,
+    #[error("missing results in response")]
+    MissingResults,
+    #[error("missing binding in value")]
+    MissingBindings,
+}
 
 fn main() {
     let mut additional_countries = vec![
@@ -33,33 +49,31 @@ fn main() {
 #[derive(Debug)]
 #[allow(dead_code)]
 struct Country {
-    id: Option<String>,  // Ex. Q31
-    id_url: Option<Url>, // Ex. http://www.wikidata.org/entity/Q31
-    country: String,     // Ex. Belgium
-    code: String,        // Ex. BE
+    id: Option<Box<str>>, // Ex. Q31
+    id_url: Option<Url>,  // Ex. http://www.wikidata.org/entity/Q31
+    country: Box<str>,    // Ex. Belgium
+    code: Box<str>,       // Ex. BE
 }
 
 impl Country {
-    fn new_without_id(code: &str, name: &str) -> Self {
+    fn new_without_id(code: impl AsRef<str>, name: impl AsRef<str>) -> Self {
         Self {
             id: None,
             id_url: None,
-            country: name.to_string(),
-            code: code.to_string(),
+            country: name.as_ref().into(),
+            code: code.as_ref().into(),
         }
     }
 
-    fn new_from_query(country_result: Value) -> Option<Self> {
-        let url_str = get_value(&country_result, "country")?.as_str()?;
+    fn new_from_query(country_result: Value) -> Result<Self, Error> {
+        let url_str = get_value(&country_result, "country")?.as_str()?; // throw invalid string
 
-        let id_url = Some(Url::from_str(url_str).ok()?);
-        let id = Some(id_url.clone()?.path_segments()?.last()?.to_owned());
+        let id_url = Some(Url::from_str(url_str)?);
+        let id = Some(id_url.clone()?.path_segments()?.last()?.into());
 
-        let country = get_value(&country_result, "countryLabel")?
-            .as_str()?
-            .to_string();
+        let country = get_value(&country_result, "countryLabel")?.as_str()?.into();
 
-        let code = get_value(&country_result, "code")?.as_str()?.to_string();
+        let code = get_value(&country_result, "code")?.as_str()?.into();
 
         Some(Self {
             id,
@@ -70,7 +84,7 @@ impl Country {
     }
 }
 
-fn get_country_list(additional_countries: &mut Vec<Country>) -> Vec<Country> {
+fn get_country_list(additional_countries: &mut Vec<Country>) -> Box<[Country]> {
     let query = r#"
 SELECT
     ?country      # Ex. http://www.wikidata.org/entity/Q31
@@ -97,24 +111,30 @@ WHERE
     countries.append(additional_countries);
     countries.dedup_by_key(|c| c.code.clone());
 
-    countries
+    countries.into_boxed_slice()
 }
 
-fn get_value<'st>(result: &'st Value, label: &'st str) -> Option<&'st Value> {
-    result.as_object()?.get(label)?.get("value")
+fn get_value<'st>(result: &'st Value, label: &str) -> Result<&'st Value, Error> {
+    result
+        .as_object()
+        .ok_or(Error::InvalidObject)?
+        .get(label)
+        .ok_or(Error::MissingBindings)?
+        .get("value")
+        .ok_or(Error::MissingBindings)
 }
 
-fn wikidata_query(query: &str) -> Option<Vec<Value>> {
-    Some(
-        ApiSync::new("https://www.wikidata.org/w/api.php")
-            .ok()?
-            .sparql_query(query)
-            .ok()?
-            .as_object()?
-            .to_owned()
-            .get("results")?
-            .get("bindings")?
-            .as_array()?
-            .to_owned(),
-    )
+fn wikidata_query(query: &str) -> Result<Vec<Value>, Error> {
+    Ok(ApiSync::new("https://www.wikidata.org/w/api.php")?
+        .sparql_query(query)?
+        .as_object()
+        .ok_or(Error::InvalidObject)?
+        .to_owned()
+        .get("results")
+        .ok_or(Error::MissingResults)?
+        .get("bindings")
+        .ok_or(Error::MissingBindings)?
+        .as_array()
+        .ok_or(Error::InvalidArray)?
+        .to_owned())
 }
