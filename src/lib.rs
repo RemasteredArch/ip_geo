@@ -103,13 +103,15 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
     /// This is called by `Self::search()`, it should not be necessary to perform manually unless
     /// it is used in an interactive program and you want to do as much work as possible before interactivity.
     pub fn cleanup(&mut self) {
-        if self.dirty {
-            self.inner.dedup_by(|a, b| a == b);
-            self.inner.sort_unstable_by_key(|e| (e.start, e.end));
-            self.inner.shrink_to_fit(); // Assumes that you will only ever cleanup after you're done
-                                        // adding to the map
-            self.dirty = false;
+        if !self.dirty {
+            return;
         }
+
+        self.inner.dedup_by(|a, b| a == b);
+        self.inner.sort_unstable_by_key(|e| (e.start, e.end));
+        self.inner.shrink_to_fit(); // Assumes that you will only ever cleanup after you're done
+                                    // adding to the map
+        self.dirty = false;
     }
 
     /// Return the entry at a given index in the internal `Vec` as a reference
