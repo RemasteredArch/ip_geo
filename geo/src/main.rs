@@ -80,7 +80,8 @@ fn print_country_list_as_rust_hashmap(countries: &[Country]) {
 
 use std::collections::HashMap;
 
-// For use with code (ex. BE) as key in HashMap
+/// A representation of a country without its ISO 3166-1 alpha-2 code
+/// For use with code (ex. BE) as key in map
 #[derive(Debug)]
 pub struct CountryData {{
     id: Option<Box<str>>,     // Ex. Q31
@@ -88,6 +89,7 @@ pub struct CountryData {{
     country: Box<str>,        // Ex. Belgium
 }}
 
+/// A map of countries, with the ISO 3166-1 alpha-2 code as the key
 #[rustfmt::skip]
 pub fn get_countries() -> HashMap<String, CountryData> {{HashMap::from([
 "#,
@@ -158,7 +160,7 @@ impl Country {
     /// ```
     /// assert_eq!(
     ///     Country::new_without_id("EX", "Example").as_rust_map_entry().as_ref(),
-    ///     "(\"EX\".into(), CountryData { id: None, id_url: None, country: \"Example\".into() } )"
+    ///     r#"("EX".into(), CountryData { id: None, id_url: None, country: "Example".into() })"#
     /// );
     /// ```
     fn as_rust_map_entry(&self) -> Box<str> {
