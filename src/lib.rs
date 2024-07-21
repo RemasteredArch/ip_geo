@@ -115,8 +115,8 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
     }
 
     /// Return the entry at a given index in the internal `Vec` as a reference
-    pub fn get_index_as_ref(&self, index: usize) -> &IpAddrEntry<A, T> {
-        &self.inner[index]
+    pub fn get_from_index_as_ref(&self, index: usize) -> Option<&IpAddrEntry<A, T>> {
+        self.inner.get(index)
     }
 
     /// Return the length of the internal `Vec`
