@@ -22,7 +22,7 @@ use mediawiki::{reqwest::Url, ApiSync, MediaWikiError};
 use serde_json::Value;
 use url::ParseError;
 
-/// Represents all possible error states of this module
+/// Represents all possible error states of this module.
 #[derive(thiserror::Error, Debug)]
 enum Error {
     #[error(transparent)]
@@ -56,7 +56,7 @@ fn main() {
     print_country_list_as_rust_hashmap(&countries);
 }
 
-/// Formats a list of countries as valid Rust code for a HashMap
+/// Formats a list of countries as valid Rust code that returns a `HashMap`.
 fn print_country_list_as_rust_hashmap(countries: &[Country]) {
     print!(
         r#"// SPDX-License-Identifier: AGPL-3.0-or-later
@@ -80,8 +80,8 @@ fn print_country_list_as_rust_hashmap(countries: &[Country]) {
 
 use std::collections::HashMap;
 
-/// A representation of a country without its ISO 3166-1 alpha-2 code
-/// For use with code (ex. BE) as key in map
+/// A representation of a country without its ISO 3166-1 alpha-2 code.
+/// For use as the value in a map, with the code (ex. BE) as the key.
 #[derive(Debug)]
 pub struct CountryData {{
     id: Option<Box<str>>,     // Ex. Q31
@@ -89,7 +89,7 @@ pub struct CountryData {{
     country: Box<str>,        // Ex. Belgium
 }}
 
-/// A map of countries, with the ISO 3166-1 alpha-2 code as the key
+/// A map of countries, with the ISO 3166-1 alpha-2 code as the key.
 #[rustfmt::skip]
 pub fn get_countries() -> HashMap<String, CountryData> {{HashMap::from([
 "#,
@@ -103,7 +103,7 @@ pub fn get_countries() -> HashMap<String, CountryData> {{HashMap::from([
     println!("])}}");
 }
 
-/// Represents a country and its ISO 3166-1 alpha-2 code, alongside a Wikidata ID (if available)
+/// Represents a country and its ISO 3166-1 alpha-2 code, alongside a Wikidata ID (if available).
 #[derive(Debug)]
 #[allow(dead_code)]
 struct Country {
@@ -114,7 +114,7 @@ struct Country {
 }
 
 impl Country {
-    /// Create a new country without a Wikidata ID
+    /// Create a new country without a Wikidata ID.
     fn new_without_id(code: impl AsRef<str>, name: impl AsRef<str>) -> Self {
         Self {
             id: None,
@@ -124,7 +124,7 @@ impl Country {
         }
     }
 
-    /// Creates a new country from the result of a Wikidata query
+    /// Creates a new country from the result of a Wikidata query.
     fn new_from_query(country_result: Value) -> Result<Self, Error> {
         // Ex. http://www.wikidata.org/entity/Q31
         let url_str = get_str_value(&country_result, "country")?;
@@ -135,7 +135,7 @@ impl Country {
             id_url
                 .clone()
                 .unwrap()
-                .path_segments() // Split by /
+                .path_segments() // Split by `/`
                 .ok_or(Error::UrlSplit)?
                 .last() // Get last element
                 .ok_or(Error::Iter)?
@@ -156,8 +156,13 @@ impl Country {
         })
     }
 
-    /// Formats contents as a valid entry of `CountryData` in a `HashMap`
+    /// Formats contents as a valid entry of `CountryData` in a `HashMap`.
+    ///
+    /// Example usage:
+    ///
     /// ```
+    /// // This could be a test
+    ///
     /// assert_eq!(
     ///     Country::new_without_id("EX", "Example").as_rust_map_entry().as_ref(),
     ///     r#"("EX".into(), CountryData { id: None, id_url: None, country: "Example".into() })"#
@@ -170,20 +175,25 @@ impl Country {
             .into_boxed_str()
     }
 
-    /// Returns self as a tuple of four Strings holding string literals: (id, id_url, country, code)
+    /// Returns self as a tuple of four Strings holding string literals: `(id, id_url, country, code)`
+    ///
+    /// Example usage:
+    ///
     /// ```
+    /// // This could be a test
+    ///
     /// assert_eq!(
     ///     Country::new_without_id("EX", "Example").contents_as_strings()
     ///     ("\"None\"", "\"None\"", "\"Example\".into()", "\"EX\".into()")
     /// );
     /// ```
     fn contents_as_strings(&self) -> (String, String, String, String) {
-        /// Wraps a string in double quotes
+        /// Wraps a string in double quotes.
         fn as_str<T: Display>(str: T) -> String {
             format!("\"{}\".into()", str)
         }
 
-        /// Given an option of a string, wraps the string in double quotes or returns "None" (with quotes)
+        /// Given an option of a string, wraps the string in double quotes or returns "None" (with quotes).
         fn opt_or_str<T: Display>(option: Option<T>) -> String {
             match option {
                 Some(str) => format!("Some({})", as_str(str)),
@@ -200,7 +210,7 @@ impl Country {
     }
 }
 
-/// Query Wikidata for a list of countries and their ISO 3166-1 alpha-2 codes as a `Country` slice
+/// Query Wikidata for a list of countries and their ISO 3166-1 alpha-2 codes as a `Country` slice.
 fn get_country_list(additional_countries: &mut Vec<Country>) -> Box<[Country]> {
     let query = r#"
 SELECT
@@ -231,14 +241,14 @@ WHERE
     countries.into_boxed_slice()
 }
 
-/// Get the internal string value of a given field that holds a string in a Serde JSON value
+/// Get the internal string value of a given field that holds a string in a Serde JSON value.
 fn get_str_value<'st>(result: &'st Value, label: &str) -> Result<&'st str, Error> {
     get_value(result, label)?
         .as_str()
         .ok_or(Error::InvalidString)
 }
 
-/// Get the value of a given field in a Serde JSON value
+/// Get the value of a given field in a Serde JSON value.
 fn get_value<'st>(result: &'st Value, label: &str) -> Result<&'st Value, Error> {
     result
         .as_object() // Validate that the JSON result is an object
@@ -249,7 +259,7 @@ fn get_value<'st>(result: &'st Value, label: &str) -> Result<&'st Value, Error> 
         .ok_or(Error::MissingBindings)
 }
 
-/// Make an arbitrary Wikidata query
+/// Make an arbitrary Wikidata query.
 fn wikidata_query(query: &str) -> Result<Vec<Value>, Error> {
     Ok(
         ApiSync::new("https://www.wikidata.org/w/api.php")? // Create a query destined for Wikidata
