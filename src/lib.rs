@@ -57,7 +57,7 @@ pub struct IpAddrMap<A: Ord + Copy, T: PartialEq> {
 }
 
 impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
-    /// Create a new, unsized instance of `Self`
+    /// Create a new, unsized instance of `Self`.
     pub const fn new() -> Self {
         Self {
             inner: vec![],
@@ -65,7 +65,7 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
         }
     }
 
-    /// Create a new instance of `Self` with a starting capacity for the internal `Vec`
+    /// Create a new instance of `Self` with a starting capacity for the internal `Vec`.
     pub fn new_with_capacity(capacity: usize) -> Self {
         Self {
             inner: Vec::with_capacity(capacity),
@@ -73,13 +73,13 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
         }
     }
 
-    /// Add another entry into the map
+    /// Add another entry into the map.
     pub fn insert(&mut self, entry: IpAddrEntry<A, T>) {
         self.inner.push(entry);
         self.dirty = true;
     }
 
-    /// For a given IP address, find the value of the stored entries the contains it, else `None`
+    /// For a given IP address, find the value of the stored entries the contains it, else `None`.
     pub fn search(&mut self, address: A) -> Option<&T> {
         self.cleanup();
 
@@ -110,21 +110,21 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
         self.inner.dedup_by(|a, b| a == b);
         self.inner.sort_unstable_by_key(|e| (e.start, e.end));
         self.inner.shrink_to_fit(); // Assumes that you will only ever cleanup after you're done
-                                    // adding to the map
+                                    // adding to the map.
         self.dirty = false;
     }
 
-    /// Return the entry at a given index in the internal `Vec` as a reference
+    /// Return the entry at a given index in the internal `Vec` as a reference.
     pub fn get_from_index_as_ref(&self, index: usize) -> Option<&IpAddrEntry<A, T>> {
         self.inner.get(index)
     }
 
-    /// Return the length of the internal `Vec`
+    /// Return the length of the internal `Vec`.
     pub fn len(&self) -> usize {
         self.inner.len()
     }
 
-    /// Returns true if the internal `Vec` is empty
+    /// Returns true if the internal `Vec` is empty.
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
@@ -215,10 +215,10 @@ pub struct IpAddrEntry<A: Ord + Copy, T> {
 }
 
 impl<A: Ord + Copy, T> IpAddrEntry<A, T> {
-    /// Create a new instance of self
-    /// Takes the start and end of an IP address range and a corresponding value
+    /// Create a new instance of self.
+    /// Takes the start and end of an IP address range and a corresponding value.
     ///
-    /// Will error if given an invalid range
+    /// Will error if given an invalid range.
     pub fn new(start: A, end: A, value: T) -> Result<Self, EmptyRangeError> {
         if start <= end {
             Ok(Self { start, end, value })
@@ -227,37 +227,37 @@ impl<A: Ord + Copy, T> IpAddrEntry<A, T> {
         }
     }
 
-    /// Return a reference to the first value of the stored IP address range
+    /// Return a reference to the first value of the stored IP address range.
     pub const fn start(&self) -> &A {
         &self.start
     }
 
-    /// Return a mutable reference to the first value of the stored IP address range
+    /// Return a mutable reference to the first value of the stored IP address range.
     pub fn start_mut(&mut self) -> &mut A {
         &mut self.start
     }
 
-    /// Return a reference to the last value of the stored IP address range
+    /// Return a reference to the last value of the stored IP address range.
     pub const fn end(&self) -> &A {
         &self.end
     }
 
-    /// Return a mutable reference to the last value of the stored IP address range
+    /// Return a mutable reference to the last value of the stored IP address range.
     pub fn end_mut(&mut self) -> &mut A {
         &mut self.end
     }
 
-    /// Return a reference to the stored value
+    /// Return a reference to the stored value.
     pub const fn value(&self) -> &T {
         &self.value
     }
 
-    /// Return a mutable reference to the stored value
+    /// Return a mutable reference to the stored value.
     pub fn value_mut(&mut self) -> &mut T {
         &mut self.value
     }
 
-    /// Return the stored IP address range as a range (`start`..=`end`)
+    /// Return the stored IP address range as a range: `(start..=end)`
     pub const fn range(&self) -> RangeInclusive<A> {
         self.start..=self.end
     }
@@ -288,7 +288,7 @@ impl<A: Ord + Copy, T> PartialOrd<A> for IpAddrEntry<A, T> {
     }
 }
 
-/// The error return when attemping to construct an invalid range
+/// The error returned when attemping to construct an invalid range.
 #[derive(Debug)]
 pub struct EmptyRangeError;
 
@@ -378,7 +378,7 @@ pub fn parse_ipv6_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv6Addr, Count
     map
 }
 
-/// Serde deserializer to convert a `u128` into an `Ipv6Addr`
+/// Serde deserializer to convert a `u128` into an `Ipv6Addr`.
 fn deserialize_ipv6<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv6Addr, D::Error> {
     pub struct Ipv6Deserializer;
 
@@ -415,7 +415,7 @@ fn deserialize_ipv6<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv6Ad
     deserializer.deserialize_str(Ipv6Deserializer)
 }
 
-/// For given IPv4 database file of a given length, parse it into an `IpAddrMap` holding IPv4 addresses
+/// For given IPv4 database file of a given length, parse it into an `IpAddrMap` holding IPv4 addresses.
 ///
 /// Example usage:
 ///
@@ -505,7 +505,7 @@ pub fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Count
     map
 }
 
-/// Serde deserializer to convert a `u32` into an `Ipv4Addr`
+/// Serde deserializer to convert a `u32` into an `Ipv4Addr`.
 fn deserialize_ipv4<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv4Addr, D::Error> {
     pub struct Ipv4Deserializer;
 
