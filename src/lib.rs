@@ -416,6 +416,54 @@ fn deserialize_ipv6<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv6Ad
 }
 
 /// For given IPv4 database file of a given length, parse it into an `IpAddrMap` holding IPv4 addresses
+///
+/// Example usage:
+///
+/// ```rust
+/// use std::{
+///     fs::{File},
+///     io::{Read, Write},
+///     net::Ipv4Addr,
+///     str::FromStr,
+/// };
+/// use ip_geo::{parse_ipv4_file, Ipv4AddrEntry};
+///
+/// let entry_a = (
+///     Ipv4Addr::new(1, 1, 1, 1),
+///     Ipv4Addr::new(3, 3, 3, 3),
+///     "BE",
+/// );
+/// let raw_start_a: u32  = entry_a.0.into();
+/// let raw_end_a: u32  = entry_a.1.into();
+/// let middle_a = Ipv4Addr::new(2, 2, 2, 2);
+///
+/// let entry_b = (
+///     Ipv4Addr::new(4, 4, 4, 4),
+///     Ipv4Addr::new(6, 6, 6, 6),
+///     "CA",
+/// );
+/// let raw_start_b: u32  = entry_b.0.into();
+/// let raw_end_b: u32  = entry_b.1.into();
+/// let middle_b = Ipv4Addr::new(5, 5, 5, 5);
+///
+/// let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+/// write!(
+///     temp_file,
+///     "{},{},{}\n{},{},{}\n",
+///     raw_start_a, raw_end_a, entry_a.2, raw_start_b, raw_end_b, entry_b.2,
+/// )
+/// .unwrap();
+/// let path = temp_file.path().into();
+/// let len = 200_000;
+///
+/// let mut ipv4_map = parse_ipv4_file(path, len);
+///
+/// assert_eq!(ipv4_map.search(middle_a).unwrap().alpha2, entry_a.2);
+/// assert_eq!(ipv4_map.search(middle_b).unwrap().alpha2, entry_b.2);
+///
+/// assert_eq!(ipv4_map.get_from_index_as_ref(0).unwrap().value().alpha2, entry_a.2);
+/// assert_eq!(ipv4_map.get_from_index_as_ref(1).unwrap().value().alpha2, entry_b.2);
+/// ```
 pub fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Country> {
     #[derive(Deserialize, Debug)]
     struct Schema {
