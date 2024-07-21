@@ -47,8 +47,8 @@ use std::{
 /// assert_eq!(map.search(Ipv4Addr::new(2, 2, 2, 2)), Some("a").as_ref());
 /// assert_eq!(map.search(Ipv4Addr::new(5, 5, 5, 5)), Some("b").as_ref());
 ///
-/// assert_eq!(map.get_index_as_ref(0), &entry_a);
-/// assert_eq!(map.get_index_as_ref(1), &entry_b);
+/// assert_eq!(map.get_from_index_as_ref(0), Some(&entry_a));
+/// assert_eq!(map.get_from_index_as_ref(1), Some(&entry_b));
 /// ```
 #[derive(Debug)]
 pub struct IpAddrMap<A: Ord + Copy, T: PartialEq> {
@@ -300,7 +300,43 @@ impl Display for EmptyRangeError {
     }
 }
 
-/// For given IPv6 database file of a given length, parse it into an `IpAddrMap` holding IPv6 addresses
+/// For given IPv6 database file of a given length, parse it into an `IpAddrMap` holding IPv6 addresses.
+///
+/// Example usage:
+///
+/// ```rust
+/// use std::{
+///     fs::{File},
+///     io::{Read, Write},
+///     net::Ipv6Addr,
+///     str::FromStr,
+/// };
+/// use ip_geo::{parse_ipv6_file, Ipv6AddrEntry};
+///
+/// let entry_a = ("1::", "3::", "BE");
+/// let middle_a = Ipv6Addr::from_str("2::").unwrap();
+///
+/// let entry_b = ("4::", "6::", "CA");
+/// let middle_b = Ipv6Addr::from_str("5::").unwrap();
+///
+/// let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+/// write!(
+///     temp_file,
+///     "{},{},{}\n{},{},{}\n",
+///     entry_a.0, entry_a.1, entry_a.2, entry_b.0, entry_b.1, entry_b.2,
+/// )
+/// .unwrap();
+/// let path = temp_file.path().into();
+/// let len = 200_000;
+///
+/// let mut ipv6_map = parse_ipv6_file(path, len);
+///
+/// assert_eq!(ipv6_map.search(middle_a).unwrap().alpha2, entry_a.2);
+/// assert_eq!(ipv6_map.search(middle_b).unwrap().alpha2, entry_b.2);
+///
+/// assert_eq!(ipv6_map.get_from_index_as_ref(0).unwrap().value().alpha2, entry_a.2);
+/// assert_eq!(ipv6_map.get_from_index_as_ref(1).unwrap().value().alpha2, entry_b.2);
+/// ```
 pub fn parse_ipv6_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv6Addr, Country> {
     #[derive(Deserialize, Debug)]
     struct Schema {
