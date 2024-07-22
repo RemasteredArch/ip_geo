@@ -35,6 +35,9 @@ fn main() {
     }
 }
 
+/// For a given IPv4 address (contained in `arguments`), find the country it is associated with.
+///
+/// Prints an ISO 3166-1 alpha-2 code (ex. BE for Belgium").
 fn find_ipv4(arguments: Arguments) {
     let mut ipv4_map = parse_ipv4_file(
         arguments
@@ -56,6 +59,9 @@ fn find_ipv4(arguments: Arguments) {
     }
 }
 
+/// For a given IPv6 address (contained in `arguments`), find the country it is associated with.
+///
+/// Prints an ISO 3166-1 alpha-2 code (ex. BE for Belgium").
 fn find_ipv6(arguments: Arguments) {
     let mut ipv6_map = parse_ipv6_file(
         arguments
@@ -77,6 +83,7 @@ fn find_ipv6(arguments: Arguments) {
     }
 }
 
+/// Launch an HTTP server that can respond to requests to resolve IP addresses to countries
 fn launch_server(arguments: Arguments) {
     todo!("Implement the server functionality");
 }

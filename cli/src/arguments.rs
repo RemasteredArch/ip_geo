@@ -25,13 +25,19 @@ use std::{
     path::Path,
 };
 
+/// Represents all execution paths that a user can request.
 pub enum RunType {
+    /// Start an HTTP server to resolve IP addresses to countries on request.
     Server,
+    /// Resolve a given IPv4 address to a country.
     Ipv4,
+    /// Resolve a given IPv6 address to a country.
     Ipv6,
+    /// User did not select a path.
     None,
 }
 
+/// Inspect `arguments` to identify what `RunType` the user wants.
 pub fn get_run_type(arguments: &Arguments) -> RunType {
     if let Some(is_server) = arguments.server {
         if is_server {
@@ -50,6 +56,7 @@ pub fn get_run_type(arguments: &Arguments) -> RunType {
     RunType::None
 }
 
+/// Represents the command-line arguments of the program.
 #[derive(Parser, Deserialize)]
 #[command(about, version, long_about = None)]
 pub struct Arguments {
@@ -109,6 +116,7 @@ impl Display for Arguments {
     }
 }
 
+/// For a given `Arguments` result from Clap, return `arguments` with defaults inserted.
 pub fn get_config(arguments: Arguments) -> Arguments {
     let from_config = get_config_file_arguments(&arguments).and_then(|v| v.ok());
 
@@ -172,6 +180,9 @@ pub fn get_config(arguments: Arguments) -> Arguments {
     }
 }
 
+/// Read the config file for the program for config values.
+///
+/// Values from the config file override defaults, but are overridden by command-line arguments.
 fn get_config_file_arguments(arguments: &Arguments) -> Option<Result<Arguments, toml::de::Error>> {
     let config_path = arguments
         .config_path
@@ -182,6 +193,9 @@ fn get_config_file_arguments(arguments: &Arguments) -> Option<Result<Arguments, 
     Some(toml::from_str(&contents))
 }
 
+/// Return the default location for the configuration file.
+///
+/// Should be overriden by the command-line argument, if provided by the user.
 fn get_default_config_path() -> Box<Path> {
     dirs::config_dir()
         .expect("An OS-specific config directory")
