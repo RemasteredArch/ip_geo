@@ -48,7 +48,9 @@ enum Error {
 fn main() {
     let mut additional_countries = vec![
         Country::new_without_id("AP", "African Regional Intellectual Property Organization"),
-        Country::new_without_id("CS", "Serbia and Montenegro"),
+        Country::new_without_id("CS", "Serbia and Montenegro"), // Needs to be validated
+        Country::new_without_id("EU", "European Union"),        // Needs to be validated
+        Country::new_without_id("??", "Unknown"),               // Needs to be validated
     ];
     let countries = get_country_list(&mut additional_countries);
 
