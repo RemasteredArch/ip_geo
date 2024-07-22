@@ -128,11 +128,12 @@ mod tests {
             }
         }
 
-        assert_eq!(
-            find_ipv4(gen_args(middle_a, path.clone())).unwrap().alpha2,
-            value_a
-        );
-        assert_eq!(find_ipv4(gen_args(middle_b, path)).unwrap().alpha2, value_b);
+        fn get_alpha2<'a>(addr: Ipv4Addr, path: Box<Path>) -> &'a str {
+            find_ipv4(gen_args(addr, path)).unwrap().alpha2
+        }
+
+        assert_eq!(get_alpha2(middle_a, path.clone()), value_a);
+        assert_eq!(get_alpha2(middle_b, path), value_b);
     }
 
     #[test]
