@@ -58,29 +58,24 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 /// };
 /// use ip_geo::ipv4::{parse_ipv4_file, Ipv4AddrEntry};
 ///
-/// let entry_a = (
-///     Ipv4Addr::new(1, 1, 1, 1),
-///     Ipv4Addr::new(3, 3, 3, 3),
-///     "BE",
-/// );
-/// let raw_start_a: u32  = entry_a.0.into();
-/// let raw_end_a: u32  = entry_a.1.into();
+/// let start_a = Ipv4Addr::new(1, 1, 1, 1);
+/// let end_a = Ipv4Addr::new(3, 3, 3, 3);
+/// let value_a = "BE";
 /// let middle_a = Ipv4Addr::new(2, 2, 2, 2);
 ///
-/// let entry_b = (
-///     Ipv4Addr::new(4, 4, 4, 4),
-///     Ipv4Addr::new(6, 6, 6, 6),
-///     "CA",
-/// );
-/// let raw_start_b: u32  = entry_b.0.into();
-/// let raw_end_b: u32  = entry_b.1.into();
+/// let start_b = Ipv4Addr::new(4, 4, 4, 4);
+/// let end_b = Ipv4Addr::new(6, 6, 6, 6);
+/// let value_b = "CA";
 /// let middle_b = Ipv4Addr::new(5, 5, 5, 5);
 ///
 /// let mut temp_file = tempfile::NamedTempFile::new().unwrap();
 /// write!(
 ///     temp_file,
-///     "{},{},{}\n{},{},{}\n",
-///     raw_start_a, raw_end_a, entry_a.2, raw_start_b, raw_end_b, entry_b.2,
+///     "{},{},{value_a}\n{},{},{value_b}\n",
+///     u32::from(start_a),
+///     u32::from(end_a),
+///     u32::from(start_b),
+///     u32::from(end_b),
 /// )
 /// .unwrap();
 /// let path = temp_file.path().into();
@@ -88,11 +83,11 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 ///
 /// let mut ipv4_map = parse_ipv4_file(path, len);
 ///
-/// assert_eq!(ipv4_map.search(middle_a).unwrap().alpha2, entry_a.2);
-/// assert_eq!(ipv4_map.search(middle_b).unwrap().alpha2, entry_b.2);
+/// assert_eq!(ipv4_map.search(middle_a).unwrap().alpha2, value_a);
+/// assert_eq!(ipv4_map.search(middle_b).unwrap().alpha2, value_b);
 ///
-/// assert_eq!(ipv4_map.get_from_index_as_ref(0).unwrap().value().alpha2, entry_a.2);
-/// assert_eq!(ipv4_map.get_from_index_as_ref(1).unwrap().value().alpha2, entry_b.2);
+/// assert_eq!(ipv4_map.get_from_index_as_ref(0).unwrap().value().alpha2, value_a);
+/// assert_eq!(ipv4_map.get_from_index_as_ref(1).unwrap().value().alpha2, value_b);
 /// ```
 pub fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Country> {
     #[derive(Deserialize, Debug)]
