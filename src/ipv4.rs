@@ -115,7 +115,10 @@ pub fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Count
         let country = match data.country {
             Either::Left(country) => country,
             Either::Right(unrecognized) => {
-                eprintln!("Unrecognized country or region '{unrecognized}'!");
+                eprintln!(
+                    "Unrecognized country or region '{unrecognized}'! ({}-{})",
+                    data.start, data.end
+                );
                 continue;
             }
         };
