@@ -81,3 +81,104 @@ fn find_ipv6(arguments: Arguments) -> Option<Country> {
 fn launch_server(arguments: Arguments) {
     todo!("Implement the server functionality");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_ipv4() {
+        use std::{io::Write, net::Ipv4Addr, path::Path};
+
+        let start_a = Ipv4Addr::new(1, 1, 1, 1);
+        let end_a = Ipv4Addr::new(3, 3, 3, 3);
+        let value_a = "BE";
+        let middle_a = Ipv4Addr::new(2, 2, 2, 2);
+
+        let start_b = Ipv4Addr::new(4, 4, 4, 4);
+        let end_b = Ipv4Addr::new(6, 6, 6, 6);
+        let value_b = "CA";
+        let middle_b = Ipv4Addr::new(5, 5, 5, 5);
+
+        let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+        write!(
+            temp_file,
+            "{},{},{value_a}\n{},{},{value_b}\n",
+            u32::from(start_a),
+            u32::from(end_a),
+            u32::from(start_b),
+            u32::from(end_b),
+        )
+        .unwrap();
+        let path: Box<Path> = temp_file.path().into();
+
+        fn gen_args(addr: Ipv4Addr, path: Box<Path>) -> arguments::Arguments {
+            Arguments {
+                config_path: None,
+                ipv4_addr: Some(addr),
+                ipv4_path: Some(path),
+                ipv4_len: Some(2),
+                ipv4_comment: None,
+                ipv6_addr: None,
+                ipv6_path: None,
+                ipv6_len: None,
+                ipv6_comment: None,
+                server: None,
+                port: None,
+            }
+        }
+
+        assert_eq!(
+            find_ipv4(gen_args(middle_a, path.clone())).unwrap().alpha2,
+            value_a
+        );
+        assert_eq!(find_ipv4(gen_args(middle_b, path)).unwrap().alpha2, value_b);
+    }
+
+    #[test]
+    fn test_find_ipv6() {
+        use std::{io::Write, net::Ipv6Addr, path::Path, str::FromStr};
+
+        let start_a = "1::";
+        let end_a = "3::";
+        let value_a = "BE";
+        let middle_a = Ipv6Addr::from_str("2::").unwrap();
+
+        let start_b = "4::";
+        let end_b = "6::";
+        let value_b = "CA";
+        let middle_b = Ipv6Addr::from_str("5::").unwrap();
+
+        let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+        write!(
+            temp_file,
+            "{},{},{value_a}\n{},{},{value_b}\n",
+            start_a, end_a, start_b, end_b,
+        )
+        .unwrap();
+        let path: Box<Path> = temp_file.path().into();
+
+        fn gen_args(addr: Ipv6Addr, path: Box<Path>) -> arguments::Arguments {
+            Arguments {
+                config_path: None,
+                ipv4_addr: None,
+                ipv4_path: None,
+                ipv4_len: None,
+                ipv4_comment: None,
+                ipv6_addr: Some(addr),
+                ipv6_path: Some(path),
+                ipv6_len: Some(2),
+                ipv6_comment: None,
+                server: None,
+                port: None,
+            }
+        }
+
+        fn get_alpha2<'a>(addr: Ipv6Addr, path: Box<Path>) -> &'a str {
+            find_ipv6(gen_args(addr, path)).unwrap().alpha2
+        }
+
+        assert_eq!(get_alpha2(middle_a, path.clone()), value_a);
+        assert_eq!(get_alpha2(middle_b, path.clone()), value_b);
+    }
+}
