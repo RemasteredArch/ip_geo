@@ -18,6 +18,7 @@
 
 #![allow(dead_code)]
 
+use celes::Country;
 use clap::Parser;
 
 mod arguments;
@@ -28,16 +29,22 @@ fn main() {
 
     match arguments::get_run_type(&arguments) {
         RunType::Server => launch_server(arguments),
-        RunType::Ipv4 => find_ipv4(arguments),
-        RunType::Ipv6 => find_ipv6(arguments),
+        RunType::Ipv4 => print_country(find_ipv4(arguments)),
+        RunType::Ipv6 => print_country(find_ipv6(arguments)),
         RunType::None => todo!("Trigger help message"),
     }
 }
 
+/// For a given `Country`, print ISO 3166-1 alpha-2 code and a country name (ex. `BE Belgium`).
+fn print_country(country: Option<Country>) {
+    match country {
+        Some(country) => println!("{} {}", country.alpha2, country.long_name),
+        None => println!("No match!"),
+    }
+}
+
 /// For a given IPv4 address (contained in `arguments`), find the country it is associated with.
-///
-/// Prints an ISO 3166-1 alpha-2 code (ex. BE for Belgium").
-fn find_ipv4(arguments: Arguments) {
+fn find_ipv4(arguments: Arguments) -> Option<Country> {
     let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(
         arguments
             .ipv4_path
@@ -50,18 +57,11 @@ fn find_ipv4(arguments: Arguments) {
     let input_addr = arguments.ipv4_addr.expect("A valid IPv4 Address");
     dbg!(input_addr);
 
-    if let Some(result) = ipv4_map.search(input_addr) {
-        dbg!(result);
-        println!("{}", result.long_name);
-    } else {
-        println!("No match!");
-    }
+    ipv4_map.search(input_addr).copied()
 }
 
 /// For a given IPv6 address (contained in `arguments`), find the country it is associated with.
-///
-/// Prints an ISO 3166-1 alpha-2 code (ex. BE for Belgium").
-fn find_ipv6(arguments: Arguments) {
+fn find_ipv6(arguments: Arguments) -> Option<Country> {
     let mut ipv6_map = ip_geo::ipv6::parse_ipv6_file(
         arguments
             .ipv6_path
@@ -74,12 +74,7 @@ fn find_ipv6(arguments: Arguments) {
     let input_addr = arguments.ipv6_addr.expect("A valid IPv6 Address");
     dbg!(input_addr);
 
-    if let Some(result) = ipv6_map.search(input_addr) {
-        dbg!(result);
-        println!("{}", result.long_name);
-    } else {
-        println!("No match!");
-    }
+    ipv6_map.search(input_addr).copied()
 }
 
 /// Launch an HTTP server that can respond to requests to resolve IP addresses to countries
