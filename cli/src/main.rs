@@ -38,7 +38,7 @@ fn main() {
 ///
 /// Prints an ISO 3166-1 alpha-2 code (ex. BE for Belgium").
 fn find_ipv4(arguments: Arguments) {
-    let mut ipv4_map = ip_geo::parse_ipv4_file(
+    let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(
         arguments
             .ipv4_path
             .expect("A valid path to an IPv4 GeoIP database"),
@@ -62,7 +62,7 @@ fn find_ipv4(arguments: Arguments) {
 ///
 /// Prints an ISO 3166-1 alpha-2 code (ex. BE for Belgium").
 fn find_ipv6(arguments: Arguments) {
-    let mut ipv6_map = ip_geo::parse_ipv6_file(
+    let mut ipv6_map = ip_geo::ipv6::parse_ipv6_file(
         arguments
             .ipv6_path
             .expect("A valid path to an IPv6 GeoIP database"),
