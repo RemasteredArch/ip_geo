@@ -51,13 +51,9 @@ pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 ///
 /// ```rust
 /// use std::{
-///     io::{Read, Write},
+///     io::Write,
 ///     net::Ipv6Addr,
 ///     str::FromStr,
-/// };
-/// use ip_geo::ipv6::{
-///     parse_ipv6_file,
-///     Ipv6AddrEntry
 /// };
 ///
 /// let start_a = "1::";
@@ -80,7 +76,7 @@ pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 /// let path = temp_file.path().into();
 /// let len = 200_000;
 ///
-/// let mut ipv6_map = parse_ipv6_file(path, len);
+/// let mut ipv6_map = ip_geo::ipv6::parse_ipv6_file(path, len);
 ///
 /// assert_eq!(ipv6_map.search(middle_a).unwrap().alpha2, value_a);
 /// assert_eq!(ipv6_map.search(middle_b).unwrap().alpha2, value_b);

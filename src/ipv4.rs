@@ -51,11 +51,10 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 ///
 /// ```rust
 /// use std::{
-///     io::{Read, Write},
+///     io::Write,
 ///     net::Ipv4Addr,
 ///     str::FromStr,
 /// };
-/// use ip_geo::ipv4::{parse_ipv4_file, Ipv4AddrEntry};
 ///
 /// let start_a = Ipv4Addr::new(1, 1, 1, 1);
 /// let end_a = Ipv4Addr::new(3, 3, 3, 3);
@@ -80,7 +79,7 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 /// let path = temp_file.path().into();
 /// let len = 2;
 ///
-/// let mut ipv4_map = parse_ipv4_file(path, len);
+/// let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(path, len);
 ///
 /// assert_eq!(ipv4_map.search(middle_a).unwrap().alpha2, value_a);
 /// assert_eq!(ipv4_map.search(middle_b).unwrap().alpha2, value_b);
