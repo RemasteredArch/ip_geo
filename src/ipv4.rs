@@ -56,7 +56,7 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 ///     net::Ipv4Addr,
 ///     str::FromStr,
 /// };
-/// use ip_geo::{parse_ipv4_file, Ipv4AddrEntry};
+/// use ip_geo::ipv4::{parse_ipv4_file, Ipv4AddrEntry};
 ///
 /// let entry_a = (
 ///     Ipv4Addr::new(1, 1, 1, 1),
