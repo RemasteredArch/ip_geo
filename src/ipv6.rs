@@ -51,7 +51,6 @@ pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 ///
 /// ```rust
 /// use std::{
-///     fs::{File},
 ///     io::{Read, Write},
 ///     net::Ipv6Addr,
 ///     str::FromStr,
@@ -61,17 +60,21 @@ pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 ///     Ipv6AddrEntry
 /// };
 ///
-/// let entry_a = ("1::", "3::", "BE");
+/// let start_a = "1::";
+/// let end_a = "3::";
+/// let value_a = "BE";
 /// let middle_a = Ipv6Addr::from_str("2::").unwrap();
 ///
-/// let entry_b = ("4::", "6::", "CA");
+/// let start_b = "4::";
+/// let end_b = "6::";
+/// let value_b = "CA";
 /// let middle_b = Ipv6Addr::from_str("5::").unwrap();
 ///
 /// let mut temp_file = tempfile::NamedTempFile::new().unwrap();
 /// write!(
 ///     temp_file,
 ///     "{},{},{}\n{},{},{}\n",
-///     entry_a.0, entry_a.1, entry_a.2, entry_b.0, entry_b.1, entry_b.2,
+///     start_a, end_a, value_a, start_b, end_b, value_b,
 /// )
 /// .unwrap();
 /// let path = temp_file.path().into();
@@ -79,11 +82,11 @@ pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 ///
 /// let mut ipv6_map = parse_ipv6_file(path, len);
 ///
-/// assert_eq!(ipv6_map.search(middle_a).unwrap().alpha2, entry_a.2);
-/// assert_eq!(ipv6_map.search(middle_b).unwrap().alpha2, entry_b.2);
+/// assert_eq!(ipv6_map.search(middle_a).unwrap().alpha2, value_a);
+/// assert_eq!(ipv6_map.search(middle_b).unwrap().alpha2, value_b);
 ///
-/// assert_eq!(ipv6_map.get_from_index_as_ref(0).unwrap().value().alpha2, entry_a.2);
-/// assert_eq!(ipv6_map.get_from_index_as_ref(1).unwrap().value().alpha2, entry_b.2);
+/// assert_eq!(ipv6_map.get_from_index_as_ref(0).unwrap().value().alpha2, value_a);
+/// assert_eq!(ipv6_map.get_from_index_as_ref(1).unwrap().value().alpha2, value_b);
 /// ```
 pub fn parse_ipv6_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv6Addr, Country> {
     #[derive(Deserialize, Debug)]

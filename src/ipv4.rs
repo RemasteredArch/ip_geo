@@ -51,7 +51,6 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 ///
 /// ```rust
 /// use std::{
-///     fs::{File},
 ///     io::{Read, Write},
 ///     net::Ipv4Addr,
 ///     str::FromStr,
@@ -79,7 +78,7 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 /// )
 /// .unwrap();
 /// let path = temp_file.path().into();
-/// let len = 200_000;
+/// let len = 2;
 ///
 /// let mut ipv4_map = parse_ipv4_file(path, len);
 ///
