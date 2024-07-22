@@ -69,12 +69,12 @@ pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 /// let mut temp_file = tempfile::NamedTempFile::new().unwrap();
 /// write!(
 ///     temp_file,
-///     "{},{},{}\n{},{},{}\n",
-///     start_a, end_a, value_a, start_b, end_b, value_b,
+///     "{},{},{value_a}\n{},{},{value_b}\n",
+///     start_a, end_a, start_b, end_b,
 /// )
 /// .unwrap();
 /// let path = temp_file.path().into();
-/// let len = 200_000;
+/// let len = 2;
 ///
 /// let mut ipv6_map = ip_geo::ipv6::parse_ipv6_file(path, len);
 ///
