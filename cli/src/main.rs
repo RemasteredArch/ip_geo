@@ -18,8 +18,8 @@
 
 #![allow(dead_code)]
 
-use celes::Country;
 use clap::Parser;
+use ip_geo::country::Country;
 
 mod arguments;
 use arguments::{Arguments, RunType};
@@ -38,7 +38,7 @@ fn main() {
 /// For a given `Country`, print ISO 3166-1 alpha-2 code and a country name (ex. `BE Belgium`).
 fn print_country(country: Option<Country>) {
     match country {
-        Some(country) => println!("{} {}", country.alpha2, country.long_name),
+        Some(country) => println!("{} {}", country.code, country.name),
         None => println!("No match!"),
     }
 }
@@ -57,7 +57,7 @@ fn find_ipv4(arguments: Arguments) -> Option<Country> {
     let input_addr = arguments.ipv4_addr.expect("A valid IPv4 Address");
     dbg!(input_addr);
 
-    ipv4_map.search(input_addr).copied()
+    ipv4_map.search(input_addr).cloned()
 }
 
 /// For a given IPv6 address (contained in `arguments`), find the country it is associated with.
@@ -74,7 +74,7 @@ fn find_ipv6(arguments: Arguments) -> Option<Country> {
     let input_addr = arguments.ipv6_addr.expect("A valid IPv6 Address");
     dbg!(input_addr);
 
-    ipv6_map.search(input_addr).copied()
+    ipv6_map.search(input_addr).cloned()
 }
 
 /// Launch an HTTP server that can respond to requests to resolve IP addresses to countries
@@ -92,12 +92,12 @@ mod tests {
 
         let start_a = Ipv4Addr::new(1, 1, 1, 1);
         let end_a = Ipv4Addr::new(3, 3, 3, 3);
-        let value_a = "BE";
+        let value_a = "BE".into();
         let middle_a = Ipv4Addr::new(2, 2, 2, 2);
 
         let start_b = Ipv4Addr::new(4, 4, 4, 4);
         let end_b = Ipv4Addr::new(6, 6, 6, 6);
-        let value_b = "CA";
+        let value_b = "CA".into();
         let middle_b = Ipv4Addr::new(5, 5, 5, 5);
 
         let mut temp_file = tempfile::NamedTempFile::new().unwrap();
@@ -128,12 +128,12 @@ mod tests {
             }
         }
 
-        fn get_alpha2<'a>(addr: Ipv4Addr, path: Box<Path>) -> &'a str {
-            find_ipv4(gen_args(addr, path)).unwrap().alpha2
+        fn get_code(addr: Ipv4Addr, path: Box<Path>) -> Box<str> {
+            find_ipv4(gen_args(addr, path)).unwrap().code
         }
 
-        assert_eq!(get_alpha2(middle_a, path.clone()), value_a);
-        assert_eq!(get_alpha2(middle_b, path), value_b);
+        assert_eq!(get_code(middle_a, path.clone()), value_a);
+        assert_eq!(get_code(middle_b, path), value_b);
     }
 
     #[test]
@@ -142,12 +142,12 @@ mod tests {
 
         let start_a = "1::";
         let end_a = "3::";
-        let value_a = "BE";
+        let value_a = "BE".into();
         let middle_a = Ipv6Addr::from_str("2::").unwrap();
 
         let start_b = "4::";
         let end_b = "6::";
-        let value_b = "CA";
+        let value_b = "CA".into();
         let middle_b = Ipv6Addr::from_str("5::").unwrap();
 
         let mut temp_file = tempfile::NamedTempFile::new().unwrap();
@@ -175,11 +175,11 @@ mod tests {
             }
         }
 
-        fn get_alpha2<'a>(addr: Ipv6Addr, path: Box<Path>) -> &'a str {
-            find_ipv6(gen_args(addr, path)).unwrap().alpha2
+        fn get_code(addr: Ipv6Addr, path: Box<Path>) -> Box<str> {
+            find_ipv6(gen_args(addr, path)).unwrap().code
         }
 
-        assert_eq!(get_alpha2(middle_a, path.clone()), value_a);
-        assert_eq!(get_alpha2(middle_b, path.clone()), value_b);
+        assert_eq!(get_code(middle_a, path.clone()), value_a);
+        assert_eq!(get_code(middle_b, path.clone()), value_b);
     }
 }

@@ -19,6 +19,8 @@
 use core::fmt;
 use std::{cmp::Ordering, error::Error, fmt::Display, ops::RangeInclusive};
 
+pub mod country;
+pub mod country_list;
 pub mod ipv4;
 pub mod ipv6;
 

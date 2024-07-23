@@ -16,9 +16,9 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
+use crate::country::Country;
+use crate::country_list::get_countries;
 use crate::{IpAddrEntry, IpAddrMap};
-use celes::Country;
-use either::Either;
 use serde::de::Unexpected;
 use serde::{de::Visitor, Deserialize, Deserializer};
 use std::str::FromStr;
@@ -58,12 +58,12 @@ pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 ///
 /// let start_a = "1::";
 /// let end_a = "3::";
-/// let value_a = "BE";
+/// let value_a = "BE".into();
 /// let middle_a = Ipv6Addr::from_str("2::").unwrap();
 ///
 /// let start_b = "4::";
 /// let end_b = "6::";
-/// let value_b = "CA";
+/// let value_b = "CA".into();
 /// let middle_b = Ipv6Addr::from_str("5::").unwrap();
 ///
 /// let mut temp_file = tempfile::NamedTempFile::new().unwrap();
@@ -78,11 +78,11 @@ pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 ///
 /// let mut ipv6_map = ip_geo::ipv6::parse_ipv6_file(path, len);
 ///
-/// assert_eq!(ipv6_map.search(middle_a).unwrap().alpha2, value_a);
-/// assert_eq!(ipv6_map.search(middle_b).unwrap().alpha2, value_b);
+/// assert_eq!(ipv6_map.search(middle_a).unwrap().code, value_a);
+/// assert_eq!(ipv6_map.search(middle_b).unwrap().code, value_b);
 ///
-/// assert_eq!(ipv6_map.get_from_index_as_ref(0).unwrap().value().alpha2, value_a);
-/// assert_eq!(ipv6_map.get_from_index_as_ref(1).unwrap().value().alpha2, value_b);
+/// assert_eq!(ipv6_map.get_from_index_as_ref(0).unwrap().value().code, value_a);
+/// assert_eq!(ipv6_map.get_from_index_as_ref(1).unwrap().value().code, value_b);
 /// ```
 pub fn parse_ipv6_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv6Addr, Country> {
     #[derive(Deserialize, Debug)]
@@ -93,8 +93,7 @@ pub fn parse_ipv6_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv6Addr, Count
         #[serde(deserialize_with = "deserialize_ipv6")]
         end: Ipv6Addr,
 
-        #[serde(with = "either::serde_untagged")]
-        country: Either<Country, String>,
+        country_code: String,
     }
 
     let file = fs::File::open(&path)
@@ -105,19 +104,16 @@ pub fn parse_ipv6_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv6Addr, Count
         .from_reader(file);
 
     let mut map = IpAddrMap::new_with_capacity(len);
+    let countries = get_countries();
 
     for entry in reader.deserialize() {
         let data: Schema = entry.unwrap();
 
-        let country = match data.country {
-            Either::Left(country) => country,
-            Either::Right(unrecognized) => {
-                eprintln!("Unrecognized country or region '{unrecognized}'!");
-                continue;
-            }
-        };
-
-        map.insert(Ipv6AddrEntry::new(data.start, data.end, country).unwrap());
+        if let Some(country) = Country::from_code(&data.country_code, &countries) {
+            map.insert(Ipv6AddrEntry::new(data.start, data.end, country).unwrap());
+        } else {
+            eprintln!("Unrecognized country or region '{}'!", data.country_code);
+        }
     }
 
     map.cleanup();

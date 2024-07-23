@@ -16,9 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use crate::{IpAddrEntry, IpAddrMap};
-use celes::Country;
-use either::Either;
+use crate::country::Country;
+use crate::{country_list, IpAddrEntry, IpAddrMap};
 use serde::de::Unexpected;
 use serde::{de::Visitor, Deserialize, Deserializer};
 use std::str::FromStr;
@@ -58,12 +57,12 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 ///
 /// let start_a = Ipv4Addr::new(1, 1, 1, 1);
 /// let end_a = Ipv4Addr::new(3, 3, 3, 3);
-/// let value_a = "BE";
+/// let value_a = "BE".into();
 /// let middle_a = Ipv4Addr::new(2, 2, 2, 2);
 ///
 /// let start_b = Ipv4Addr::new(4, 4, 4, 4);
 /// let end_b = Ipv4Addr::new(6, 6, 6, 6);
-/// let value_b = "CA";
+/// let value_b = "CA".into();
 /// let middle_b = Ipv4Addr::new(5, 5, 5, 5);
 ///
 /// let mut temp_file = tempfile::NamedTempFile::new().unwrap();
@@ -81,11 +80,11 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 ///
 /// let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(path, len);
 ///
-/// assert_eq!(ipv4_map.search(middle_a).unwrap().alpha2, value_a);
-/// assert_eq!(ipv4_map.search(middle_b).unwrap().alpha2, value_b);
+/// assert_eq!(ipv4_map.search(middle_a).unwrap().code, value_a);
+/// assert_eq!(ipv4_map.search(middle_b).unwrap().code, value_b);
 ///
-/// assert_eq!(ipv4_map.get_from_index_as_ref(0).unwrap().value().alpha2, value_a);
-/// assert_eq!(ipv4_map.get_from_index_as_ref(1).unwrap().value().alpha2, value_b);
+/// assert_eq!(ipv4_map.get_from_index_as_ref(0).unwrap().value().code, value_a);
+/// assert_eq!(ipv4_map.get_from_index_as_ref(1).unwrap().value().code, value_b);
 /// ```
 pub fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Country> {
     #[derive(Deserialize, Debug)]
@@ -96,8 +95,7 @@ pub fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Count
         #[serde(deserialize_with = "deserialize_ipv4")]
         end: Ipv4Addr,
 
-        #[serde(with = "either::serde_untagged")]
-        country: Either<Country, String>,
+        country_code: String,
     }
 
     let file = fs::File::open(&path)
@@ -108,22 +106,16 @@ pub fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Count
         .from_reader(file);
 
     let mut map = IpAddrMap::new_with_capacity(len);
+    let countries = country_list::get_countries();
 
     for entry in reader.deserialize() {
         let data: Schema = entry.unwrap();
 
-        let country = match data.country {
-            Either::Left(country) => country,
-            Either::Right(unrecognized) => {
-                eprintln!(
-                    "Unrecognized country or region '{unrecognized}'! ({}-{})",
-                    data.start, data.end
-                );
-                continue;
-            }
-        };
-
-        map.insert(Ipv4AddrEntry::new(data.start, data.end, country).unwrap());
+        if let Some(country) = Country::from_code(&data.country_code, &countries) {
+            map.insert(Ipv4AddrEntry::new(data.start, data.end, country).unwrap());
+        } else {
+            eprintln!("Unrecognized country or region '{}'!", data.country_code);
+        }
     }
 
     map.cleanup();
