@@ -8,12 +8,18 @@ In newer versions of Tor, the IP geolocation database that this project relies o
 
 ## Project
 
-This directory only includes the library that parses and searches the [Tor IP geolocation databases](https://packages.ubuntu.com/noble/tor-geoipdb).
+This directory only includes the library that parses and searches [Tor IP geolocation databases](https://packages.ubuntu.com/noble/tor-geoipdb).
 
-See [`cli/`](./cli/) for the actual command line utility and server.
+### [`cli/`](./cli/)
 
-[`geo/`](./geo/) is a Crate for deserializing country codes
+Contains the actual command line utility and server.
+
+### [`geo/`](./geo/)
+
+A Crate for generating a list of country codes and names
 based on data sourced from [`location(8)`](https://www.ipfire.org/location/how-to-use/cli).\
+Used for [`src/country_list.rs`](./src/country_list.rs).
+
 Depends on having `location(8)` in `$PATH`
 such that it can be run with `cmd /C location` (on Windows) or `sh -c location` (otherwise).
 
