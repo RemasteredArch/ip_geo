@@ -15,13 +15,23 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use std::{fmt::Display, str::FromStr};
+use std::{
+    fmt::Display,
+    process::{Command, Output},
+    str::{self, FromStr},
+};
 
 use chrono::{SecondsFormat, Utc};
 
 /// Represents all possible error states of this module.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
+    #[error(transparent)]
+    StrFromUtf8(#[from] core::str::Utf8Error),
+
     #[error("can't parse line into Country")]
     InvalidCountryLine,
 
@@ -31,7 +41,7 @@ pub enum Error {
 
 fn main() {
     let additional_countries = vec![Country::new("??", "Unknown")];
-    let countries = get_country_list(additional_countries);
+    let countries = get_country_list(additional_countries).unwrap();
 
     // dbg!(&countries);
     // print_country_list_as_code_and_name(&countries);
@@ -175,12 +185,12 @@ impl FromStr for Country {
     }
 }
 
-fn get_country_list(mut additional_countries: Vec<Country>) -> Box<[Country]> {
-    let input = call_location();
-
+fn get_country_list(mut additional_countries: Vec<Country>) -> Result<Box<[Country]>, Error> {
+    let input = call_location()?;
     let mut countries = Vec::with_capacity(input.len() + additional_countries.len());
 
     for line in input {
+        // Alternatively, this could bubble up an error
         match Country::from_str(&line) {
             Ok(country) => countries.push(country),
             Err(error) => eprintln!("Error parsing country list: {error}"),
@@ -190,17 +200,24 @@ fn get_country_list(mut additional_countries: Vec<Country>) -> Box<[Country]> {
     countries.append(&mut additional_countries);
     countries.dedup_by_key(|c| c.code.clone());
 
-    countries.into_boxed_slice()
+    Ok(countries.into_boxed_slice())
 }
 
-fn call_location() -> Vec<Box<str>> {
-    // actually implement syscall here
-    let lines: Vec<Box<str>> = vec![
-        "AA AAAA".into(),
-        "BB BBBB".into(),
-        "CCC CCCC".into(),
-        "D DDDD".into(),
-    ];
+fn call_location() -> Result<Vec<Box<str>>, Error> {
+    let output = call("location list-countries --show-name")?;
 
-    lines
+    let output = output.stdout.split(|c| *c == b'\n');
+
+    // What can I do about that unwrap?
+    let lines = output.map(|s| str::from_utf8(s).unwrap().into());
+
+    Ok(lines.collect())
+}
+
+fn call(command: &str) -> Result<Output, Error> {
+    if cfg!(target_os = "windows") {
+        Ok(Command::new("cmd").args(["/C", command]).output()?)
+    } else {
+        Ok(Command::new("sh").args(["-c", command]).output()?)
+    }
 }
