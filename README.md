@@ -11,7 +11,8 @@ This directory only includes the library that parses and searches the [Tor IP ge
 
 See [`cli/`](./cli/) for the actual command line utility and server.
 
-[`geo/`](./geo/) is a Crate for deserializing country codes based on data sourced from Wikidata.
+[`geo/`](./geo/) is a Crate for deserializing country codes
+based on data sourced from [`location(8)`](https://www.ipfire.org/location/how-to-use/cli).
 
 ## License
 
