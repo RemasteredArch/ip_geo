@@ -174,6 +174,15 @@ impl Country {
 impl FromStr for Country {
     type Err = Error;
 
+    /// Parse a line into a `Country`.
+    ///
+    /// Expects a two letter line in this format:
+    ///
+    /// ```text
+    /// cc country name
+    /// ```
+    ///
+    /// Where `cc` is a two letter country code, and `country name` is an arbitrary string.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (code, name) = s
             .split_once(' ')
@@ -187,6 +196,10 @@ impl FromStr for Country {
     }
 }
 
+/// Returns a list of countries.
+///
+/// Sourced from [`location(8)`](https://man-pages.ipfire.org/libloc/location.html)
+/// and `additional_countries`.
 fn get_country_list(mut additional_countries: Vec<Country>) -> Result<Box<[Country]>, Error> {
     let input = call_location()?;
     let mut countries = Vec::with_capacity(input.len() + additional_countries.len());
@@ -212,14 +225,28 @@ fn get_country_list(mut additional_countries: Vec<Country>) -> Result<Box<[Count
 fn call_location() -> Result<Vec<Box<str>>, Error> {
     let output = call("location list-countries --show-name")?;
 
+    // Split into lines
+    // Is this broken by Windows' CRLF?
     let output = output.stdout.split(|c| *c == b'\n');
 
+    // Parse each line from bytes into strings
     // What can I do about that unwrap?
     let lines = output.map(|s| str::from_utf8(s).unwrap().into());
 
     Ok(lines.collect())
 }
 
+/// Make a shell call.
+///
+/// On Windows:
+/// ```cmd
+/// cmd /C command
+/// ```
+///
+/// On POSIX:
+/// ```sh
+/// sh -c command
+/// ```
 fn call(command: &str) -> Result<Output, Error> {
     if cfg!(target_os = "windows") {
         Ok(Command::new("cmd").args(["/C", command]).output()?)
