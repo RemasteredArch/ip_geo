@@ -32,8 +32,8 @@ pub enum Error {
     #[error(transparent)]
     StrFromUtf8(#[from] core::str::Utf8Error),
 
-    #[error("can't parse line into Country")]
-    InvalidCountryLine,
+    #[error("can't parse line '{0}' into Country")]
+    InvalidCountryLine(Box<str>),
 
     #[error("expected two letter country code, received '{0}'")]
     InvalidCode(Box<str>),
@@ -175,7 +175,9 @@ impl FromStr for Country {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (code, name) = s.split_once(' ').ok_or(Error::InvalidCountryLine)?;
+        let (code, name) = s
+            .split_once(' ')
+            .ok_or(Error::InvalidCountryLine(s.into()))?;
 
         if code.len() != 2 {
             return Err(Error::InvalidCode(code.into()));
@@ -190,6 +192,10 @@ fn get_country_list(mut additional_countries: Vec<Country>) -> Result<Box<[Count
     let mut countries = Vec::with_capacity(input.len() + additional_countries.len());
 
     for line in input {
+        if line.len() == 0 {
+            continue;
+        }
+
         // Alternatively, this could bubble up an error
         match Country::from_str(&line) {
             Ok(country) => countries.push(country),
