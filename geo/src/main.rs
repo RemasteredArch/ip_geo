@@ -18,41 +18,20 @@
 use std::{fmt::Display, str::FromStr};
 
 use chrono::{SecondsFormat, Utc};
-use mediawiki::{reqwest::Url, ApiSync, MediaWikiError};
-use serde_json::Value;
-use url::ParseError;
 
 /// Represents all possible error states of this module.
 #[derive(thiserror::Error, Debug)]
-enum Error {
-    #[error(transparent)]
-    Url(#[from] ParseError),
-    #[error("can't split url")]
-    UrlSplit,
-    #[error(transparent)]
-    Wiki(#[from] MediaWikiError),
-    #[error("iterator operation failed")]
-    Iter, // Could probably be more specific
-    #[error("can't map value to object")]
-    InvalidObject,
-    #[error("can't map value to array")]
-    InvalidArray,
-    #[error("map convert value to string")]
-    InvalidString,
-    #[error("missing results in response")]
-    MissingResults,
-    #[error("missing binding in value")]
-    MissingBindings,
+pub enum Error {
+    #[error("can't parse line into Country")]
+    InvalidCountryLine,
+
+    #[error("expected two letter country code, received '{0}'")]
+    InvalidCode(Box<str>),
 }
 
 fn main() {
-    let mut additional_countries = vec![
-        Country::new_without_id("AP", "Asia/Pacific"),
-        Country::new_without_id("CS", "Serbia and Montenegro"),
-        Country::new_without_id("EU", "European Union"),
-        Country::new_without_id("??", "Unknown"),
-    ];
-    let countries = get_country_list(&mut additional_countries);
+    let additional_countries = vec![Country::new("??", "Unknown")];
+    let countries = get_country_list(additional_countries);
 
     // dbg!(&countries);
     // print_country_list_as_code_and_name(&countries);
@@ -73,7 +52,7 @@ fn main() {
 fn print_country_list_as_code_and_name(countries: &[Country]) {
     countries
         .iter()
-        .for_each(|c| println!("{} {}", c.code, c.country));
+        .for_each(|c| println!("{} {}", c.code, c.name));
 }
 
 /// Formats prints a list of countries as valid Rust code that returns a `HashMap`.
@@ -101,18 +80,9 @@ fn print_country_list_as_rust_hashmap(countries: &[Country]) {
 
 use std::collections::HashMap;
 
-/// A representation of a country without its ISO 3166-1 alpha-2 code.
-/// For use as the value in a map, with the code (ex. BE) as the key.
-#[derive(Debug)]
-pub struct CountryData {{
-    id: Option<Box<str>>,     // Ex. Q31
-    id_url: Option<Box<str>>, // Ex. http://www.wikidata.org/entity/Q31
-    country: Box<str>,        // Ex. Belgium
-}}
-
 /// A map of countries, with the ISO 3166-1 alpha-2 code as the key.
 #[rustfmt::skip]
-pub fn get_countries() -> HashMap<String, CountryData> {{HashMap::from([
+pub fn get_countries() -> HashMap<String, String> {{HashMap::from([
 "#,
         Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true) // Ex. 2024-07-21T04:11:07Z
     );
@@ -128,172 +98,109 @@ pub fn get_countries() -> HashMap<String, CountryData> {{HashMap::from([
 #[derive(Debug)]
 #[allow(dead_code)]
 struct Country {
-    id: Option<Box<str>>, // Ex. Q31
-    id_url: Option<Url>,  // Ex. http://www.wikidata.org/entity/Q31
-    country: Box<str>,    // Ex. Belgium
-    code: Box<str>,       // Ex. BE
+    name: Box<str>, // Ex. Belgium
+    code: Box<str>, // Ex. BE
 }
 
 impl Country {
     /// Create a new country without a Wikidata ID.
-    fn new_without_id(code: impl AsRef<str>, name: impl AsRef<str>) -> Self {
+    fn new(code: impl AsRef<str>, name: impl AsRef<str>) -> Self {
         Self {
-            id: None,
-            id_url: None,
-            country: name.as_ref().into(),
+            name: name.as_ref().into(),
             code: code.as_ref().into(),
         }
-    }
-
-    /// Creates a new country from the result of a Wikidata query.
-    fn new_from_query(country_result: Value) -> Result<Self, Error> {
-        // Ex. http://www.wikidata.org/entity/Q31
-        let url_str = get_str_value(&country_result, "country")?;
-        let id_url = Some(Url::from_str(url_str)?);
-
-        // Ex. http://www.wikidata.org/entity/Q31 -> Q31
-        let id = Some(
-            id_url
-                .clone()
-                .unwrap()
-                .path_segments() // Split by `/`
-                .ok_or(Error::UrlSplit)?
-                .last() // Get last element
-                .ok_or(Error::Iter)?
-                .into(),
-        );
-
-        // Ex. Belgium
-        let country = get_str_value(&country_result, "countryLabel")?.into();
-
-        // Ex. BE
-        let code = get_str_value(&country_result, "code")?.into();
-
-        Ok(Self {
-            id,
-            id_url,
-            country,
-            code,
-        })
     }
 
     /// Formats contents as a valid entry of `CountryData` in a `HashMap`.
     ///
     /// Example usage:
     ///
-    /// ```
-    /// // This could be a test
-    ///
+    /// ```rust
     /// assert_eq!(
-    ///     Country::new_without_id("EX", "Example").as_rust_map_entry().as_ref(),
-    ///     r#"("EX".into(), CountryData { id: None, id_url: None, country: "Example".into() })"#
+    ///     Country::new("EX", "Example").as_rust_map_entry().as_ref(),
+    ///     r#"("EX".into(), "Example".into())"#
     /// );
     /// ```
     fn as_rust_map_entry(&self) -> Box<str> {
-        let (id, id_url, country, code) = self.contents_as_strings();
+        let (code, name) = self.contents_as_strings();
 
-        format!("({code}, CountryData {{ id: {id}, id_url: {id_url}, country: {country} }})")
-            .into_boxed_str()
+        format!("({code}, {name})").into_boxed_str()
     }
 
-    /// Returns self as a tuple of four Strings holding string literals: `(id, id_url, country, code)`
+    /// Returns self as a tuple of four Strings holding string literals: `(code, name)`
     ///
     /// Example usage:
     ///
     /// ```
-    /// // This could be a test
-    ///
     /// assert_eq!(
     ///     Country::new_without_id("EX", "Example").contents_as_strings()
-    ///     ("\"None\"", "\"None\"", "\"Example\".into()", "\"EX\".into()")
+    ///     ("\"EX\".into()", "\"Example\".into()")
     /// );
     /// ```
-    fn contents_as_strings(&self) -> (String, String, String, String) {
+    fn contents_as_strings(&self) -> (Box<str>, Box<str>) {
         /// Wraps a string in double quotes.
-        fn as_str<T: Display>(str: T) -> String {
-            format!("\"{}\".into()", str)
+        fn as_str<T: Display>(str: T) -> Box<str> {
+            format!("\"{}\".into()", str).into_boxed_str()
         }
 
-        /// Given an option of a string, wraps the string in double quotes or returns "None" (with quotes).
-        fn opt_or_str<T: Display>(option: Option<T>) -> String {
-            match option {
-                Some(str) => format!("Some({})", as_str(str)),
-                None => "None".to_string(),
-            }
-        }
+        let (code, name) = self.as_tuple();
 
-        let id = opt_or_str(self.id.clone());
-        let id_url = opt_or_str(self.id_url.clone());
-        let country = as_str(self.country.clone());
-        let code = as_str(self.code.clone());
+        (as_str(code), as_str(name))
+    }
 
-        (id, id_url, country, code)
+    /// Returns the struct's internal fields as a tuple: `(code, name)`
+    ///
+    /// ```rust
+    /// assert_eq!(
+    ///     Country::new("EX", "Example").as_tuple(),
+    ///     (Box::new("EX"), Box::new("Example"))
+    /// );
+    /// ```
+    fn as_tuple(&self) -> (Box<str>, Box<str>) {
+        (self.code.clone(), self.name.clone())
     }
 }
 
-/// Query Wikidata for a list of countries and their ISO 3166-1 alpha-2 codes as a `Country` slice.
-fn get_country_list(additional_countries: &mut Vec<Country>) -> Box<[Country]> {
-    let query = r#"
-SELECT
-    ?country      # Ex. http://www.wikidata.org/entity/Q31
-    ?countryLabel # Ex. Belgium
-    ?code         # Ex. BE
-WHERE
-{
-    ?country wdt:P31 wd:Q6256;  # For every instance of (p:31) country (wq:Q6256)
-        wdt:P297 ?code.         # Get its ISO 3166-1 alpha-2 code (P297)
+impl FromStr for Country {
+    type Err = Error;
 
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } # Or "[AUTO_LANGUAGE],en"
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (code, name) = s.split_once(' ').ok_or(Error::InvalidCountryLine)?;
+
+        if code.len() != 2 {
+            return Err(Error::InvalidCode(code.into()));
+        }
+
+        Ok(Self::new(code, name))
+    }
 }
-# LIMIT 300 # Should only return ~180 results, so no limit necessary
-"#;
 
-    let result = wikidata_query(query).expect("The result of a Wikidata Query");
+fn get_country_list(mut additional_countries: Vec<Country>) -> Box<[Country]> {
+    let input = call_location();
 
-    let mut countries = Vec::with_capacity(result.len() + additional_countries.len());
+    let mut countries = Vec::with_capacity(input.len() + additional_countries.len());
 
-    for country in result {
-        countries.push(Country::new_from_query(country).unwrap());
+    for line in input {
+        match Country::from_str(&line) {
+            Ok(country) => countries.push(country),
+            Err(error) => eprintln!("Error parsing country list: {error}"),
+        }
     }
 
-    countries.append(additional_countries);
+    countries.append(&mut additional_countries);
     countries.dedup_by_key(|c| c.code.clone());
 
     countries.into_boxed_slice()
 }
 
-/// Get the internal string value of a given field that holds a string in a Serde JSON value.
-fn get_str_value<'st>(result: &'st Value, label: &str) -> Result<&'st str, Error> {
-    get_value(result, label)?
-        .as_str()
-        .ok_or(Error::InvalidString)
-}
+fn call_location() -> Vec<Box<str>> {
+    // actually implement syscall here
+    let lines: Vec<Box<str>> = vec![
+        "AA AAAA".into(),
+        "BB BBBB".into(),
+        "CCC CCCC".into(),
+        "D DDDD".into(),
+    ];
 
-/// Get the value of a given field in a Serde JSON value.
-fn get_value<'st>(result: &'st Value, label: &str) -> Result<&'st Value, Error> {
-    result
-        .as_object() // Validate that the JSON result is an object
-        .ok_or(Error::InvalidObject)?
-        .get(label) // Get a field in that object
-        .ok_or(Error::MissingBindings)?
-        .get("value") // Get the internal value of that field
-        .ok_or(Error::MissingBindings)
-}
-
-/// Make an arbitrary Wikidata query.
-fn wikidata_query(query: &str) -> Result<Vec<Value>, Error> {
-    Ok(
-        ApiSync::new("https://www.wikidata.org/w/api.php")? // Create a query destined for Wikidata
-            .sparql_query(query)? // Make the query
-            .as_object() // Validate that the JSON result is an object
-            .ok_or(Error::InvalidObject)?
-            .to_owned()
-            .get("results") // Get the actual result (the types are already known so the other field can be ignored)
-            .ok_or(Error::MissingResults)?
-            .get("bindings") // Get the actual values of the result
-            .ok_or(Error::MissingBindings)?
-            .as_array() // Validate that the JSON result is an array
-            .ok_or(Error::InvalidArray)?
-            .to_owned(),
-    )
+    lines
 }
