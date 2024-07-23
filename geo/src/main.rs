@@ -55,8 +55,8 @@ fn main() {
     let countries = get_country_list(&mut additional_countries);
 
     // dbg!(&countries);
-    print_country_list_as_code_and_name(&countries);
-    // print_country_list_as_rust_hashmap(&countries);
+    // print_country_list_as_code_and_name(&countries);
+    print_country_list_as_rust_hashmap(&countries);
 }
 
 /// Formats and prints a list of countries' codes and names separated by a space
