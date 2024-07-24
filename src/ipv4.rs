@@ -78,7 +78,7 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 /// let path = temp_file.path().into();
 /// let len = 2;
 ///
-/// let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(path, len);
+/// let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(path, len, Some(b'#'));
 ///
 /// assert_eq!(ipv4_map.search(middle_a).unwrap().code, value_a);
 /// assert_eq!(ipv4_map.search(middle_b).unwrap().code, value_b);
@@ -86,7 +86,11 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 /// assert_eq!(ipv4_map.get_from_index_as_ref(0).unwrap().value().code, value_a);
 /// assert_eq!(ipv4_map.get_from_index_as_ref(1).unwrap().value().code, value_b);
 /// ```
-pub fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Country> {
+pub fn parse_ipv4_file(
+    path: Box<Path>,
+    len: usize,
+    comment: Option<u8>,
+) -> IpAddrMap<Ipv4Addr, Country> {
     #[derive(Deserialize, Debug)]
     struct Schema {
         #[serde(deserialize_with = "deserialize_ipv4")]
@@ -102,7 +106,7 @@ pub fn parse_ipv4_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv4Addr, Count
         .unwrap_or_else(|_| panic!("Could not open IPv4 database at {}", path.to_string_lossy()));
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
-        .comment(Some(b'#'))
+        .comment(comment)
         .from_reader(file);
 
     let mut map = IpAddrMap::new_with_capacity(len);

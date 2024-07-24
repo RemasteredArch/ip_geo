@@ -45,6 +45,8 @@ fn print_country(country: Option<Country>) {
 
 /// For a given IPv4 address (contained in `arguments`), find the country it is associated with.
 fn find_ipv4(arguments: Arguments) -> Option<Country> {
+    let comment = arguments.ipv4_comment.map(char_to_byte);
+
     let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(
         arguments
             .ipv4_path
@@ -52,16 +54,18 @@ fn find_ipv4(arguments: Arguments) -> Option<Country> {
         arguments
             .ipv4_len
             .expect("The number of lines in the IPv4 GeoIP database"),
+        comment,
     );
 
     let input_addr = arguments.ipv4_addr.expect("A valid IPv4 Address");
-    dbg!(input_addr);
 
     ipv4_map.search(input_addr).cloned()
 }
 
 /// For a given IPv6 address (contained in `arguments`), find the country it is associated with.
 fn find_ipv6(arguments: Arguments) -> Option<Country> {
+    let comment = arguments.ipv4_comment.map(char_to_byte);
+
     let mut ipv6_map = ip_geo::ipv6::parse_ipv6_file(
         arguments
             .ipv6_path
@@ -69,12 +73,20 @@ fn find_ipv6(arguments: Arguments) -> Option<Country> {
         arguments
             .ipv6_len
             .expect("The number of lines in the IPv6 GeoIP database"),
+        comment,
     );
 
     let input_addr = arguments.ipv6_addr.expect("A valid IPv6 Address");
-    dbg!(input_addr);
 
     ipv6_map.search(input_addr).cloned()
+}
+
+/// Lossily converts a char to a byte.
+///
+/// Where a char is multiple bytes, it returns only the first byte.
+fn char_to_byte(char: char) -> u8 {
+    // How could this be improved?
+    char.to_string().as_bytes().first().unwrap().to_owned()
 }
 
 /// Launch an HTTP server that can respond to requests to resolve IP addresses to countries

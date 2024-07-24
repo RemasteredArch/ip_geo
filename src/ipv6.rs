@@ -76,7 +76,7 @@ pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 /// let path = temp_file.path().into();
 /// let len = 2;
 ///
-/// let mut ipv6_map = ip_geo::ipv6::parse_ipv6_file(path, len);
+/// let mut ipv6_map = ip_geo::ipv6::parse_ipv6_file(path, len, Some(b'#'));
 ///
 /// assert_eq!(ipv6_map.search(middle_a).unwrap().code, value_a);
 /// assert_eq!(ipv6_map.search(middle_b).unwrap().code, value_b);
@@ -84,7 +84,11 @@ pub type Ipv6AddrEntry<T> = IpAddrEntry<Ipv6Addr, T>;
 /// assert_eq!(ipv6_map.get_from_index_as_ref(0).unwrap().value().code, value_a);
 /// assert_eq!(ipv6_map.get_from_index_as_ref(1).unwrap().value().code, value_b);
 /// ```
-pub fn parse_ipv6_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv6Addr, Country> {
+pub fn parse_ipv6_file(
+    path: Box<Path>,
+    len: usize,
+    comment: Option<u8>,
+) -> IpAddrMap<Ipv6Addr, Country> {
     #[derive(Deserialize, Debug)]
     struct Schema {
         #[serde(deserialize_with = "deserialize_ipv6")]
@@ -100,7 +104,7 @@ pub fn parse_ipv6_file(path: Box<Path>, len: usize) -> IpAddrMap<Ipv6Addr, Count
         .unwrap_or_else(|_| panic!("Could not open IPv6 database at {}", path.to_string_lossy()));
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
-        .comment(Some(b'#'))
+        .comment(comment)
         .from_reader(file);
 
     let mut map = IpAddrMap::new_with_capacity(len);

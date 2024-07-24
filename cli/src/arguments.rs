@@ -57,7 +57,7 @@ pub fn get_run_type(arguments: &Arguments) -> RunType {
 }
 
 /// Represents the command-line arguments of the program.
-#[derive(Parser, Deserialize)]
+#[derive(Parser, Deserialize, Debug)]
 #[command(about, version, long_about = None)]
 pub struct Arguments {
     #[arg(short = 'f', long = "config-path")]
