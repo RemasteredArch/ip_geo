@@ -140,15 +140,7 @@ fn deserialize_ipv6<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv6Ad
         where
             E: serde::de::Error,
         {
-            const MASK: u128 = 0xFF;
-
-            let array = std::array::from_fn(|index| {
-                let shift = (7 - index) * u16::BITS as usize;
-
-                (v >> shift & MASK) as u16
-            });
-
-            Ok(array.into())
+            Ok(Ipv6Addr::from_bits(v))
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>

@@ -142,15 +142,7 @@ fn deserialize_ipv4<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Ipv4Ad
         where
             E: serde::de::Error,
         {
-            const MASK: u32 = 0xFF;
-
-            let array = std::array::from_fn(|index| {
-                let shift = (3 - index) * u8::BITS as usize;
-
-                (v >> shift & MASK) as u8
-            });
-
-            Ok(array.into())
+            Ok(Ipv4Addr::from_bits(v))
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
