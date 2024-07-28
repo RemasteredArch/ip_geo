@@ -5,6 +5,7 @@ authors = ["RemasteredArch", "Jaxydog"]
 edition = "2021"
 repository = "https://github.com/RemasteredArch/ip_geo/"
 license = "AGPL-3.0-or-later"
+rust-version = "1.80"
 
 [workspace]
 members = ["cli", "geo"]
