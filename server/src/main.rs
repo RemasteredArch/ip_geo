@@ -17,7 +17,10 @@
 
 use clap::Parser;
 use ip_geo::{country::Country, IpAddrMap};
-use std::net::{Ipv4Addr, Ipv6Addr};
+use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    sync::Arc,
+};
 
 use warp::Filter;
 
@@ -31,8 +34,8 @@ pub async fn main() {
     // Safety: `arguments::get_config()` implements default values
     let port = arguments.port.unwrap();
 
-    let ipv4_map = parse_ipv4(&arguments);
-    let ipv6_map = parse_ipv6(&arguments);
+    let ipv4_map = Arc::new(parse_ipv4(&arguments));
+    let ipv6_map = Arc::new(parse_ipv6(&arguments));
 
     let search = move |ipv4_addr: Ipv4Addr| search_clean_ipv4_map(ipv4_addr, &ipv4_map);
 
