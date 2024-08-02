@@ -37,13 +37,15 @@ pub async fn main() {
     let ipv4_map = Arc::new(parse_ipv4(&arguments));
     let ipv6_map = Arc::new(parse_ipv6(&arguments));
 
-    let search = move |ipv4_addr: Ipv4Addr| search_clean_ipv4_map(ipv4_addr, &ipv4_map);
+    let search_ipv4 = move |ipv4_addr: Ipv4Addr| search_clean_ip_map(ipv4_addr, &ipv4_map);
+    let search_ipv6 = move |ipv6_addr: Ipv6Addr| search_clean_ip_map(ipv6_addr, &ipv6_map);
 
-    let ipv4 = warp::path!("ipv4" / Ipv4Addr).map(search);
+    let ipv4 = warp::path!("ipv4" / Ipv4Addr).map(search_ipv4);
+    let ipv6 = warp::path!("ipv6" / Ipv6Addr).map(search_ipv6);
 
     println!("Serving on http://127.0.0.1:{port}/");
 
-    let routes = warp::get().and(warp::path("v0")).and(ipv4);
+    let routes = warp::get().and(warp::path("v0")).and(ipv4.or(ipv6));
 
     warp::serve(routes).run(([127, 0, 0, 1], port)).await;
 }
@@ -51,9 +53,9 @@ pub async fn main() {
 /// Search an IPv4 address map for an IP address.
 ///
 /// Assumes that the `IpAddrMap` is clean, otherwise it will panic.
-fn search_clean_ipv4_map(ipv4_addr: Ipv4Addr, ipv4_map: &IpAddrMap<Ipv4Addr, Country>) -> String {
+fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>) -> String {
     // Safety: this function assumes a clean map.
-    ipv4_map.search_unsafe(ipv4_addr).unwrap().name.to_string()
+    ip_map.search_unsafe(ip_addr).unwrap().name.to_string()
 }
 
 /// Lossily converts a char to a byte.
