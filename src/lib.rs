@@ -86,8 +86,23 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
     }
 
     /// For a given IP address, find the value of the stored entries the contains it, else `None`.
+    ///
+    /// Cleans the map first, if necessary.
     pub fn search(&mut self, address: A) -> Option<&T> {
+        // Cleans the map, making `search_unsafe()` safe to use.
         self.cleanup();
+
+        self.search_unsafe(address)
+    }
+
+    /// For a given IP address, find the value of the stored entries the contains it, else `None`.
+    ///
+    /// Panics if called on a dirty map. Only call this if you don't have a mutable reference and
+    /// are *certain* that it has been cleaned first.
+    pub fn search_unsafe(&self, address: A) -> Option<&T> {
+        if self.dirty {
+            panic!("Tried to search dirty IPAddrMap");
+        }
 
         let index = self
             .inner
@@ -95,13 +110,6 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
             .ok()?;
 
         Some(self.inner[index].value())
-
-        /* Alternative syntax:
-        self.inner
-            .binary_search_by(|e| e.partial_cmp(&address).unwrap())
-            .ok()
-            .map(|i| self.inner[i].value())
-        */
     }
 
     /// If necessary, prepare internal `Vec` for searching by performing a dedup, sort, and shrink.

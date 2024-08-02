@@ -31,11 +31,12 @@ pub async fn main() {
     // Safety: `arguments::get_config()` implements default values
     let port = arguments.port.unwrap();
 
-    let mut ipv4_map = parse_ipv4(&arguments);
-    let mut ipv6_map = parse_ipv6(&arguments);
+    let ipv4_map = parse_ipv4(&arguments);
+    let ipv6_map = parse_ipv6(&arguments);
 
-    let ipv4 = warp::path!("ipv4" / Ipv4Addr)
-        .map(|ipv4_addr: Ipv4Addr| search_ipv4(ipv4_addr, &mut ipv4_map));
+    let search = move |ipv4_addr: Ipv4Addr| search_clean_ipv4_map(ipv4_addr, &ipv4_map);
+
+    let ipv4 = warp::path!("ipv4" / Ipv4Addr).map(search);
 
     println!("Serving on http://127.0.0.1:{port}/");
 
@@ -44,8 +45,12 @@ pub async fn main() {
     warp::serve(routes).run(([127, 0, 0, 1], port)).await;
 }
 
-fn search_ipv4(ipv4_addr: Ipv4Addr, ipv4_map: &mut IpAddrMap<Ipv4Addr, Country>) -> String {
-    ipv4_map.search(ipv4_addr).unwrap().name.to_string()
+/// Search an IPv4 address map for an IP address.
+///
+/// Assumes that the `IpAddrMap` is clean, otherwise it will panic.
+fn search_clean_ipv4_map(ipv4_addr: Ipv4Addr, ipv4_map: &IpAddrMap<Ipv4Addr, Country>) -> String {
+    // Safety: this function assumes a clean map.
+    ipv4_map.search_unsafe(ipv4_addr).unwrap().name.to_string()
 }
 
 /// Lossily converts a char to a byte.
@@ -56,14 +61,17 @@ fn char_to_byte(char: char) -> u8 {
     char.to_string().as_bytes().first().unwrap().to_owned()
 }
 
-/// For a given set of arguments, parse and return the IPv4 database into an `IpAddrMap`.
+/// For a given set of arguments, parse and return the IPv4 database into a clean `IpAddrMap`.
 fn parse_ipv4(arguments: &Arguments) -> IpAddrMap<Ipv4Addr, Country> {
     // Safety: `arguments::get_config()` implements default values
     let ipv4_path = arguments.ipv4_path.clone().unwrap();
     let ipv4_len = arguments.ipv4_len.unwrap();
     let ipv4_comment = arguments.ipv4_comment.map(char_to_byte);
 
-    ip_geo::ipv4::parse_ipv4_file(ipv4_path, ipv4_len, ipv4_comment)
+    let mut map = ip_geo::ipv4::parse_ipv4_file(ipv4_path, ipv4_len, ipv4_comment);
+    map.cleanup();
+
+    map
 }
 
 /// For a given set of arguments, parse and return the IPv6 database into an `IpAddrMap`.
@@ -73,5 +81,8 @@ fn parse_ipv6(arguments: &Arguments) -> IpAddrMap<Ipv6Addr, Country> {
     let ipv6_len = arguments.ipv6_len.unwrap();
     let ipv6_comment = arguments.ipv6_comment.map(char_to_byte);
 
-    ip_geo::ipv6::parse_ipv6_file(ipv6_path, ipv6_len, ipv6_comment)
+    let mut map = ip_geo::ipv6::parse_ipv6_file(ipv6_path, ipv6_len, ipv6_comment);
+    map.cleanup();
+
+    map
 }
