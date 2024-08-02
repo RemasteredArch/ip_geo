@@ -27,8 +27,6 @@ use std::{
 
 /// Represents all execution paths that a user can request.
 pub enum RunType {
-    /// Start an HTTP server to resolve IP addresses to countries on request.
-    Server,
     /// Resolve a given IPv4 address to a country.
     Ipv4,
     /// Resolve a given IPv6 address to a country.
@@ -39,12 +37,6 @@ pub enum RunType {
 
 /// Inspect `arguments` to identify what `RunType` the user wants.
 pub fn get_run_type(arguments: &Arguments) -> RunType {
-    if let Some(is_server) = arguments.server {
-        if is_server {
-            return RunType::Server;
-        }
-    }
-
     if arguments.ipv4_addr.is_some() {
         return RunType::Ipv4;
     }
@@ -95,14 +87,6 @@ pub struct Arguments {
     #[arg(long = "IPv6-comment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv6_comment: Option<char>,
-
-    #[arg(short = 's', long = "server")]
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub server: Option<bool>,
-
-    #[arg(short = 'p', long = "port")]
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub port: Option<u16>,
 }
 
 impl Display for Arguments {
@@ -110,9 +94,7 @@ impl Display for Arguments {
         writeln!(f, "Config:")?;
         writeln!(f, " * Config: {:?}", self.config_path)?;
         writeln!(f, " * IPv4 DB: {:?}", self.ipv4_path)?;
-        writeln!(f, " * IPv6 DB: {:?}", self.ipv6_path)?;
-        writeln!(f, " * Start as server: {:?}", self.server)?;
-        writeln!(f, " * Server port: {:?}", self.port)
+        writeln!(f, " * IPv6 DB: {:?}", self.ipv6_path)
     }
 }
 
@@ -155,16 +137,6 @@ pub fn get_config(arguments: Arguments) -> Arguments {
         .or_else(|| from_config.as_ref().and_then(|v| v.ipv6_comment))
         .unwrap_or('#');
 
-    let server = arguments
-        .server
-        .or_else(|| from_config.as_ref().and_then(|v| v.server))
-        .unwrap_or_default();
-
-    let port = arguments
-        .port
-        .or_else(|| from_config.as_ref().and_then(|v| v.port))
-        .unwrap_or(26_000);
-
     Arguments {
         config_path: Some(config),
         ipv4_addr: arguments.ipv4_addr,
@@ -175,8 +147,6 @@ pub fn get_config(arguments: Arguments) -> Arguments {
         ipv6_path: Some(ipv6_path),
         ipv6_len: Some(ipv6_len),
         ipv6_comment: Some(ipv6_comment),
-        server: Some(server),
-        port: Some(port),
     }
 }
 

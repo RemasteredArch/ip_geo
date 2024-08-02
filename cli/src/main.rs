@@ -23,14 +23,11 @@ use ip_geo::country::Country;
 
 mod arguments;
 use arguments::{Arguments, RunType};
-mod server;
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let arguments = arguments::get_config(Arguments::parse());
 
     match arguments::get_run_type(&arguments) {
-        RunType::Server => launch_server(arguments).await,
         RunType::Ipv4 => print_country(find_ipv4(arguments)),
         RunType::Ipv6 => print_country(find_ipv6(arguments)),
         RunType::None => todo!("Trigger help message"),
@@ -91,11 +88,6 @@ fn char_to_byte(char: char) -> u8 {
     char.to_string().as_bytes().first().unwrap().to_owned()
 }
 
-/// Launch an HTTP server that can respond to requests to resolve IP addresses to countries
-async fn launch_server(arguments: Arguments) {
-    server::launch_server(arguments).await;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -137,8 +129,6 @@ mod tests {
                 ipv6_path: None,
                 ipv6_len: None,
                 ipv6_comment: None,
-                server: None,
-                port: None,
             }
         }
 
@@ -184,8 +174,6 @@ mod tests {
                 ipv6_path: Some(path),
                 ipv6_len: Some(2),
                 ipv6_comment: None,
-                server: None,
-                port: None,
             }
         }
 
