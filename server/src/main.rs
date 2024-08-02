@@ -17,10 +17,7 @@
 
 use clap::Parser;
 use ip_geo::{country::Country, IpAddrMap};
-use std::{
-    net::{Ipv4Addr, Ipv6Addr},
-    str::FromStr,
-};
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 use warp::Filter;
 
@@ -31,23 +28,24 @@ use arguments::Arguments;
 pub async fn main() {
     let arguments = arguments::get_config(Arguments::parse());
 
-    // Safety: `crate::arguments` implements default values
-    let config_path = arguments.config_path.unwrap();
+    // Safety: `arguments::get_config()` implements default values
     let port = arguments.port.unwrap();
 
-    let root = warp::path("v1");
-    let get = root.and(warp::path("get"));
+    let mut ipv4_map = parse_ipv4(&arguments);
+    let mut ipv6_map = parse_ipv6(&arguments);
 
-    let ipv4_map = parse_ipv4(arguments);
-    let ipv6_map = parse_ipv6(arguments);
-
-    let ipv4 = get
-        .and(warp::path!("ipv4" / Ipv4Addr))
-        .map(|ipv4_addr| todo!());
+    let ipv4 = warp::path!("ipv4" / Ipv4Addr)
+        .map(|ipv4_addr: Ipv4Addr| search_ipv4(ipv4_addr, &mut ipv4_map));
 
     println!("Serving on http://127.0.0.1:{port}/");
 
-    warp::serve(ipv4).run(([127, 0, 0, 1], port)).await;
+    let routes = warp::get().and(warp::path("v0")).and(ipv4);
+
+    warp::serve(routes).run(([127, 0, 0, 1], port)).await;
+}
+
+fn search_ipv4(ipv4_addr: Ipv4Addr, ipv4_map: &mut IpAddrMap<Ipv4Addr, Country>) -> String {
+    ipv4_map.search(ipv4_addr).unwrap().name.to_string()
 }
 
 /// Lossily converts a char to a byte.
@@ -59,9 +57,9 @@ fn char_to_byte(char: char) -> u8 {
 }
 
 /// For a given set of arguments, parse and return the IPv4 database into an `IpAddrMap`.
-fn parse_ipv4(arguments: Arguments) -> IpAddrMap<Ipv4Addr, Country> {
-    // Safety: `crate::arguments` implements default values
-    let ipv4_path = arguments.ipv4_path.unwrap();
+fn parse_ipv4(arguments: &Arguments) -> IpAddrMap<Ipv4Addr, Country> {
+    // Safety: `arguments::get_config()` implements default values
+    let ipv4_path = arguments.ipv4_path.clone().unwrap();
     let ipv4_len = arguments.ipv4_len.unwrap();
     let ipv4_comment = arguments.ipv4_comment.map(char_to_byte);
 
@@ -69,9 +67,9 @@ fn parse_ipv4(arguments: Arguments) -> IpAddrMap<Ipv4Addr, Country> {
 }
 
 /// For a given set of arguments, parse and return the IPv6 database into an `IpAddrMap`.
-fn parse_ipv6(arguments: Arguments) -> IpAddrMap<Ipv6Addr, Country> {
-    // Safety: `crate::arguments` implements default values
-    let ipv6_path = arguments.ipv6_path.unwrap();
+fn parse_ipv6(arguments: &Arguments) -> IpAddrMap<Ipv6Addr, Country> {
+    // Safety: `arguments::get_config()` implements default values
+    let ipv6_path = arguments.ipv6_path.clone().unwrap();
     let ipv6_len = arguments.ipv6_len.unwrap();
     let ipv6_comment = arguments.ipv6_comment.map(char_to_byte);
 
