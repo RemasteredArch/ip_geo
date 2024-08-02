@@ -15,34 +15,36 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
+use clap::Parser;
 use std::{net::Ipv4Addr, str::FromStr};
 
 use warp::Filter;
 
-use crate::{arguments::Arguments, find_ipv4};
+mod arguments;
+use arguments::Arguments;
 
-pub async fn launch_server(arguments: Arguments) {
+#[tokio::main]
+pub async fn main() {
+    let arguments = arguments::get_config(Arguments::parse());
+
     // Safety: `crate::arguments` implements default values
+    let config_path = arguments.config_path.unwrap();
+    let ipv4_path = arguments.ipv4_path.unwrap();
+    let ipv4_len = arguments.ipv4_len.unwrap();
+    let ipv4_comment = arguments.ipv4_comment.unwrap();
+    let ipv6_path = arguments.ipv6_path.unwrap();
+    let ipv6_len = arguments.ipv6_len.unwrap();
+    let ipv6_comment = arguments.ipv6_comment.unwrap();
     let port = arguments.port.unwrap();
 
     let root = warp::path("v1");
     let get = root.and(warp::path("get"));
 
     let ipv4 = get
-        .and(warp::path("ipv4"))
-        .and(warp::path::param())
-        .map(move |ipv4_addr: String| get_ipv4(&ipv4_addr, arguments.clone()));
+        .and(warp::path!("ipv4" / Ipv4Addr))
+        .map(|ipv4_addr| todo!());
 
     println!("Serving on http://127.0.0.1:{port}/");
 
     warp::serve(ipv4).run(([127, 0, 0, 1], port)).await;
-}
-
-fn get_ipv4(ipv4_addr: &str, mut arguments: Arguments) -> String {
-    arguments.ipv4_addr = Ipv4Addr::from_str(ipv4_addr).ok();
-
-    match find_ipv4(arguments) {
-        Some(country) => country.name.to_string(),
-        None => "<No Country Found!>".to_string(),
-    }
 }
