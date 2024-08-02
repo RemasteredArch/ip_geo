@@ -21,7 +21,7 @@ use serde::Deserialize;
 use std::{fmt::Display, fs, path::Path};
 
 /// Represents the command-line arguments of the program.
-#[derive(Parser, Deserialize, Debug, Clone)]
+#[derive(Parser, Deserialize, Debug)]
 #[command(about, version, long_about = None)]
 pub struct Arguments {
     #[arg(short = 'f', long = "config-path")]
