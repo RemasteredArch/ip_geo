@@ -12,16 +12,20 @@ This directory only includes the library that parses and searches [Tor IP geoloc
 
 ### [`cli/`](./cli/)
 
-Contains the actual command line utility and server.
+Contains a command line utility for resolving IP addresses to countries.
 
 ### [`geo/`](./geo/)
 
 A Crate for generating a list of country codes and names
 based on data sourced from [`location(8)`](https://www.ipfire.org/location/how-to-use/cli).\
-Used for [`src/country_list.rs`](./src/country_list.rs).
+Used to generate [`src/country_list.rs`](./src/country_list.rs).
 
 Depends on having `location(8)` in `$PATH`
 such that it can be run with `cmd /C location` (on Windows) or `sh -c location` (otherwise).
+
+### [`server/`](./server/)
+
+Contains a HTTP API for resolving IP addresses to countries.
 
 ## License
 
