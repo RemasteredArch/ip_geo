@@ -598,6 +598,7 @@ dependencies = [
  "csv",
  "serde",
  "tempfile",
+ "thiserror",
 ]
 
 [[package]]

@@ -16,8 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use core::fmt;
-use std::{cmp::Ordering, error::Error, fmt::Display, ops::RangeInclusive};
+use std::{cmp::Ordering, ops::RangeInclusive};
 
 pub mod country;
 pub mod country_list;
@@ -88,28 +87,29 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
     /// For a given IP address, find the value of the stored entries the contains it, else `None`.
     ///
     /// Cleans the map first, if necessary.
-    pub fn search(&mut self, address: A) -> Option<&T> {
+    pub fn search(&mut self, address: A) -> Result<&T, Error> {
         // Cleans the map, making `search_unsafe()` safe to use.
         self.cleanup();
 
-        self.search_unsafe(address)
+        self.try_search(address)
     }
 
     /// For a given IP address, find the value of the stored entries the contains it, else `None`.
     ///
-    /// Panics if called on a dirty map. Only call this if you don't have a mutable reference and
-    /// are *certain* that it has been cleaned first.
-    pub fn search_unsafe(&self, address: A) -> Option<&T> {
+    /// Requires that the map be clean, call `.cleanup()` before using this function, or use
+    /// `.search()` instead if you have mutability.
+    pub fn try_search(&self, address: A) -> Result<&T, Error> {
         if self.dirty {
-            panic!("Tried to search dirty IPAddrMap");
+            return Err(Error::DirtyIpAddrMap);
         }
 
         let index = self
             .inner
             .binary_search_by(|e| e.partial_cmp(&address).unwrap())
-            .ok()?;
+            .map_err(|_| Error::NoValueFound)?;
 
-        Some(self.inner[index].value())
+        // Safety: `binary_search_by` would already have returned an error if the index didn't exist
+        Ok(self.inner[index].value())
     }
 
     /// If necessary, prepare internal `Vec` for searching by performing a dedup, sort, and shrink.
@@ -191,11 +191,11 @@ impl<A: Ord + Copy, T> IpAddrEntry<A, T> {
     /// Takes the start and end of an IP address range and a corresponding value.
     ///
     /// Will error if given an invalid range.
-    pub fn new(start: A, end: A, value: T) -> Result<Self, EmptyRangeError> {
+    pub fn new(start: A, end: A, value: T) -> Result<Self, Error> {
         if start <= end {
             Ok(Self { start, end, value })
         } else {
-            Err(EmptyRangeError)
+            Err(Error::EmptyRangeError)
         }
     }
 
@@ -260,14 +260,19 @@ impl<A: Ord + Copy, T> PartialOrd<A> for IpAddrEntry<A, T> {
     }
 }
 
-/// The error returned when attemping to construct an invalid range.
-#[derive(Debug)]
-pub struct EmptyRangeError;
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    /// The error returned when attemping to perform clean-only operations on a dirty `IpAddrMap`.
+    #[error("tried to perform clean-only operation on IpAddrMap")]
+    DirtyIpAddrMap,
 
-impl Error for EmptyRangeError {}
+    /// The error returned when no value is found for a given key.
+    ///
+    /// Intended for use with looking up `Country`s from IP addresses.
+    #[error("no value associated with key")]
+    NoValueFound,
 
-impl Display for EmptyRangeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "the given range is empty")
-    }
+    /// The error returned when attemping to construct an invalid range.
+    #[error("tried to construct invalid range")]
+    EmptyRangeError,
 }

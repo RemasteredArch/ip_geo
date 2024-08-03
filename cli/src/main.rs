@@ -35,15 +35,18 @@ fn main() {
 }
 
 /// For a given `Country`, print ISO 3166-1 alpha-2 code and a country name (ex. `BE Belgium`).
-fn print_country(country: Option<Country>) {
+fn print_country(country: Result<Country, ip_geo::Error>) {
     match country {
-        Some(country) => println!("{} {}", country.code, country.name),
-        None => println!("No match!"),
+        Ok(country) => println!("{} {}", country.code, country.name),
+        Err(error) => match error {
+            ip_geo::Error::NoValueFound => println!("No country found!"),
+            _ => eprintln!("{error}"),
+        },
     }
 }
 
 /// For a given IPv4 address (contained in `arguments`), find the country it is associated with.
-fn find_ipv4(arguments: Arguments) -> Option<Country> {
+fn find_ipv4(arguments: Arguments) -> Result<Country, ip_geo::Error> {
     let comment = arguments.ipv4_comment.map(char_to_byte);
 
     let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(
@@ -62,7 +65,7 @@ fn find_ipv4(arguments: Arguments) -> Option<Country> {
 }
 
 /// For a given IPv6 address (contained in `arguments`), find the country it is associated with.
-fn find_ipv6(arguments: Arguments) -> Option<Country> {
+fn find_ipv6(arguments: Arguments) -> Result<Country, ip_geo::Error> {
     let comment = arguments.ipv4_comment.map(char_to_byte);
 
     let mut ipv6_map = ip_geo::ipv6::parse_ipv6_file(

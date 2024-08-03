@@ -55,7 +55,7 @@ pub async fn main() {
 /// Assumes that the `IpAddrMap` is clean, otherwise it will panic.
 fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>) -> String {
     // Safety: this function assumes a clean map.
-    ip_map.search_unsafe(ip_addr).unwrap().name.to_string()
+    ip_map.try_search(ip_addr).unwrap().name.to_string()
 }
 
 /// Lossily converts a char to a byte.
