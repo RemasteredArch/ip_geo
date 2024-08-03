@@ -116,7 +116,10 @@ pub fn parse_ipv6_file(
         let data: Schema = entry.unwrap();
 
         if let Some(country) = Country::from_code(&data.country_code, &countries) {
-            map.insert(Ipv6AddrEntry::new(data.start, data.end, country).unwrap());
+            // If not an unrecognized IP block,
+            if country.code != "??".into() {
+                map.insert(Ipv6AddrEntry::new(data.start, data.end, country).unwrap());
+            }
         } else {
             eprintln!("Unrecognized country or region '{}'!", data.country_code);
         }

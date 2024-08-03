@@ -68,7 +68,10 @@ fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>
         // Bug: 'Unknown' returns code 200 OK
         Ok(country) => with_status(country.name.to_string(), StatusCode::OK),
         Err(error) => match error {
-            ip_geo::Error::NoValueFound => with_status(error.to_string(), StatusCode::NOT_FOUND),
+            ip_geo::Error::NoValueFound => with_status(
+                "no country associated with IP address".to_string(),
+                StatusCode::NOT_FOUND,
+            ),
             _ => {
                 eprintln!("Error 500: request resulted in error: '{error}'");
                 with_status(error.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
