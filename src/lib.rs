@@ -49,11 +49,11 @@ pub mod ipv6;
 /// map.insert(entry_a.clone());
 /// map.insert(entry_b.clone());
 ///
-/// assert_eq!(map.search(Ipv4Addr::new(2, 2, 2, 2)), Some("a").as_ref());
-/// assert_eq!(map.search(Ipv4Addr::new(5, 5, 5, 5)), Some("b").as_ref());
+/// assert_eq!(map.search(Ipv4Addr::new(2, 2, 2, 2)).unwrap(), &"a");
+/// assert_eq!(map.search(Ipv4Addr::new(5, 5, 5, 5)).unwrap(), &"b");
 ///
-/// assert_eq!(map.get_from_index_as_ref(0), Some(&entry_a));
-/// assert_eq!(map.get_from_index_as_ref(1), Some(&entry_b));
+/// assert_eq!(map.get_from_index_as_ref(0).unwrap(), &entry_a);
+/// assert_eq!(map.get_from_index_as_ref(1).unwrap(), &entry_b);
 /// ```
 #[derive(Debug)]
 pub struct IpAddrMap<A: Ord + Copy, T: PartialEq> {
@@ -129,8 +129,8 @@ impl<A: Ord + Copy, T: PartialEq> IpAddrMap<A, T> {
     }
 
     /// Return the entry at a given index in the internal `Vec` as a reference.
-    pub fn get_from_index_as_ref(&self, index: usize) -> Option<&IpAddrEntry<A, T>> {
-        self.inner.get(index)
+    pub fn get_from_index_as_ref(&self, index: usize) -> Result<&IpAddrEntry<A, T>, Error> {
+        self.inner.get(index).ok_or(Error::NoValueFound)
     }
 
     /// Return the length of the internal `Vec`.

@@ -46,6 +46,8 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 
 /// For given IPv4 database file of a given length, parse it into an `IpAddrMap` holding IPv4 addresses.
 ///
+/// `comment` is used internally as a `u8` by taking the last byte of `comment` (`comment as u8`).
+///
 /// Example usage:
 ///
 /// ```rust
@@ -78,7 +80,7 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 /// let path = temp_file.path().into();
 /// let len = 2;
 ///
-/// let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(path, len, Some(b'#'));
+/// let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(path, len, Some('#'));
 ///
 /// assert_eq!(ipv4_map.search(middle_a).unwrap().code, value_a);
 /// assert_eq!(ipv4_map.search(middle_b).unwrap().code, value_b);
@@ -89,7 +91,7 @@ pub type Ipv4AddrEntry<T> = IpAddrEntry<Ipv4Addr, T>;
 pub fn parse_ipv4_file(
     path: Box<Path>,
     len: usize,
-    comment: Option<u8>,
+    comment: Option<char>,
 ) -> IpAddrMap<Ipv4Addr, Country> {
     #[derive(Deserialize, Debug)]
     struct Schema {
@@ -106,7 +108,7 @@ pub fn parse_ipv4_file(
         .unwrap_or_else(|_| panic!("Could not open IPv4 database at {}", path.to_string_lossy()));
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
-        .comment(comment)
+        .comment(comment.map(|c| c as u8))
         .from_reader(file);
 
     let mut map = IpAddrMap::new_with_capacity(len);

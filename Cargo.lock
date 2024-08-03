@@ -621,6 +621,7 @@ dependencies = [
  "dirs",
  "ip_geo",
  "serde",
+ "serde_derive",
  "tempfile",
  "tokio",
  "toml",

@@ -47,8 +47,6 @@ fn print_country(country: Result<Country, ip_geo::Error>) {
 
 /// For a given IPv4 address (contained in `arguments`), find the country it is associated with.
 fn find_ipv4(arguments: Arguments) -> Result<Country, ip_geo::Error> {
-    let comment = arguments.ipv4_comment.map(char_to_byte);
-
     let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(
         arguments
             .ipv4_path
@@ -56,7 +54,7 @@ fn find_ipv4(arguments: Arguments) -> Result<Country, ip_geo::Error> {
         arguments
             .ipv4_len
             .expect("The number of lines in the IPv4 GeoIP database"),
-        comment,
+        arguments.ipv4_comment,
     );
 
     let input_addr = arguments.ipv4_addr.expect("A valid IPv4 Address");
@@ -66,8 +64,6 @@ fn find_ipv4(arguments: Arguments) -> Result<Country, ip_geo::Error> {
 
 /// For a given IPv6 address (contained in `arguments`), find the country it is associated with.
 fn find_ipv6(arguments: Arguments) -> Result<Country, ip_geo::Error> {
-    let comment = arguments.ipv4_comment.map(char_to_byte);
-
     let mut ipv6_map = ip_geo::ipv6::parse_ipv6_file(
         arguments
             .ipv6_path
@@ -75,7 +71,7 @@ fn find_ipv6(arguments: Arguments) -> Result<Country, ip_geo::Error> {
         arguments
             .ipv6_len
             .expect("The number of lines in the IPv6 GeoIP database"),
-        comment,
+        arguments.ipv6_comment,
     );
 
     let input_addr = arguments.ipv6_addr.expect("A valid IPv6 Address");
