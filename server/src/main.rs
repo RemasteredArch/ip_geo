@@ -62,8 +62,9 @@ fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>
 ///
 /// Where a char is multiple bytes, it returns only the first byte.
 fn char_to_byte(char: char) -> u8 {
-    // How could this be improved?
-    char.to_string().as_bytes().first().unwrap().to_owned()
+    // Convert the character into a `u32`, then take the first 8 bits
+    // Safety: bit shift forces the `u32` to fit into `u8`
+    (char as u32 >> (u32::BITS - u8::BITS)).try_into().unwrap()
 }
 
 /// For a given set of arguments, parse and return the IPv4 database into a clean `IpAddrMap`.
