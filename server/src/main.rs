@@ -56,15 +56,7 @@ pub async fn main() {
 ///
 /// Assumes that the `IpAddrMap` is clean, otherwise it return an internal server error (code 500).
 fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>) -> impl Reply {
-    fn search<A: Ord + Copy>(
-        ip_addr: A,
-        ip_map: &IpAddrMap<A, Country>,
-    ) -> Result<Country, ip_geo::Error> {
-        // Safety: `search_clean_ip_map()` assumes a clean map.
-        ip_map.try_search(ip_addr).cloned()
-    }
-
-    match search(ip_addr, ip_map) {
+    match ip_map.try_search(ip_addr) {
         Ok(country) => with_status(country.name.to_string(), StatusCode::OK),
         Err(error) => match error {
             ip_geo::Error::NoValueFound => with_status(
