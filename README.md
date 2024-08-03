@@ -2,7 +2,9 @@
 
 IP geolocation, designed for [Grafana](https://grafana.com/oss/grafana/) [Geomap](https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/geomap/).
 
-Currently, IP Geo only implements command-line IP address lookup.
+ip_geo is currently highly experimental.
+It will follow semantic versioning after its first release,
+but for now it will morph and change without warning.
 For a more optimized, mature, and accurate (but still open source) solution, see [IPFire Location](https://www.ipfire.org/location).
 In newer versions of Tor, the IP geolocation database that this project relies on is actually extracted from IPFire's location database.
 
