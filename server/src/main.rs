@@ -17,10 +17,12 @@
 
 use clap::Parser;
 use ip_geo::{country::Country, IpAddrMap};
+use serde_derive::Serialize;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
     sync::Arc,
 };
+use warp::{http::StatusCode, reply::with_status, Reply};
 
 use warp::Filter;
 
@@ -52,19 +54,27 @@ pub async fn main() {
 
 /// Search an IPv4 address map for an IP address.
 ///
-/// Assumes that the `IpAddrMap` is clean, otherwise it will panic.
-fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>) -> String {
-    // Safety: this function assumes a clean map.
-    ip_map.try_search(ip_addr).unwrap().name.to_string()
-}
+/// Assumes that the `IpAddrMap` is clean, otherwise it return an internal server error (code 500).
+fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>) -> impl Reply {
+    fn search<A: Ord + Copy>(
+        ip_addr: A,
+        ip_map: &IpAddrMap<A, Country>,
+    ) -> Result<Country, ip_geo::Error> {
+        // Safety: `search_clean_ip_map()` assumes a clean map.
+        ip_map.try_search(ip_addr).cloned()
+    }
 
-/// Lossily converts a char to a byte.
-///
-/// Where a char is multiple bytes, it returns only the first byte.
-fn char_to_byte(char: char) -> u8 {
-    // Convert the character into a `u32`, then take the first 8 bits
-    // Safety: bit shift forces the `u32` to fit into `u8`
-    (char as u32 >> (u32::BITS - u8::BITS)) as u8
+    match search(ip_addr, ip_map) {
+        // Bug: 'Unknown' returns code 200 OK
+        Ok(country) => with_status(country.name.to_string(), StatusCode::OK),
+        Err(error) => match error {
+            ip_geo::Error::NoValueFound => with_status(error.to_string(), StatusCode::NOT_FOUND),
+            _ => {
+                eprintln!("Error 500: request resulted in error: '{error}'");
+                with_status(error.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        },
+    }
 }
 
 /// For a given set of arguments, parse and return the IPv4 database into a clean `IpAddrMap`.
@@ -72,7 +82,7 @@ fn parse_ipv4(arguments: &Arguments) -> IpAddrMap<Ipv4Addr, Country> {
     // Safety: `arguments::get_config()` implements default values
     let path = arguments.ipv4_path.clone().unwrap();
     let file_length = arguments.ipv4_len.unwrap();
-    let comment = arguments.ipv4_comment.map(char_to_byte); // Take the first byte of internal `u32`
+    let comment = arguments.ipv4_comment;
 
     let mut map = ip_geo::ipv4::parse_ipv4_file(path, file_length, comment);
     map.cleanup();
@@ -85,10 +95,28 @@ fn parse_ipv6(arguments: &Arguments) -> IpAddrMap<Ipv6Addr, Country> {
     // Safety: `arguments::get_config()` implements default values
     let path = arguments.ipv6_path.clone().unwrap();
     let file_length = arguments.ipv6_len.unwrap();
-    let comment = arguments.ipv6_comment.map(char_to_byte);
+    let comment = arguments.ipv6_comment;
 
     let mut map = ip_geo::ipv6::parse_ipv6_file(path, file_length, comment);
     map.cleanup();
 
     map
+}
+
+#[derive(Serialize)]
+struct CountryApi {
+    code: Box<str>,
+    name: Box<str>,
+}
+
+impl CountryApi {
+    fn new(code: Box<str>, name: Box<str>) -> Self {
+        Self { code, name }
+    }
+}
+
+impl From<Country> for CountryApi {
+    fn from(value: Country) -> Self {
+        CountryApi::new(value.code, value.name)
+    }
 }
