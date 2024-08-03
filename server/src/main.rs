@@ -65,7 +65,6 @@ fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>
     }
 
     match search(ip_addr, ip_map) {
-        // Bug: 'Unknown' returns code 200 OK
         Ok(country) => with_status(country.name.to_string(), StatusCode::OK),
         Err(error) => match error {
             ip_geo::Error::NoValueFound => with_status(
