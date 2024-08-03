@@ -71,10 +71,10 @@ fn char_to_byte(char: char) -> u8 {
 fn parse_ipv4(arguments: &Arguments) -> IpAddrMap<Ipv4Addr, Country> {
     // Safety: `arguments::get_config()` implements default values
     let path = arguments.ipv4_path.clone().unwrap();
-    let length = arguments.ipv4_len.unwrap();
+    let file_length = arguments.ipv4_len.unwrap();
     let comment = arguments.ipv4_comment.map(char_to_byte); // Take the first byte of internal `u32`
 
-    let mut map = ip_geo::ipv4::parse_ipv4_file(path, length, comment);
+    let mut map = ip_geo::ipv4::parse_ipv4_file(path, file_length, comment);
     map.cleanup();
 
     map
@@ -83,11 +83,11 @@ fn parse_ipv4(arguments: &Arguments) -> IpAddrMap<Ipv4Addr, Country> {
 /// For a given set of arguments, parse and return the IPv6 database into an `IpAddrMap`.
 fn parse_ipv6(arguments: &Arguments) -> IpAddrMap<Ipv6Addr, Country> {
     // Safety: `arguments::get_config()` implements default values
-    let ipv6_path = arguments.ipv6_path.clone().unwrap();
-    let ipv6_len = arguments.ipv6_len.unwrap();
-    let ipv6_comment = arguments.ipv6_comment.map(char_to_byte);
+    let path = arguments.ipv6_path.clone().unwrap();
+    let file_length = arguments.ipv6_len.unwrap();
+    let comment = arguments.ipv6_comment.map(char_to_byte);
 
-    let mut map = ip_geo::ipv6::parse_ipv6_file(ipv6_path, ipv6_len, ipv6_comment);
+    let mut map = ip_geo::ipv6::parse_ipv6_file(path, file_length, comment);
     map.cleanup();
 
     map
