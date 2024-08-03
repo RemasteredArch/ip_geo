@@ -64,17 +64,17 @@ fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>
 fn char_to_byte(char: char) -> u8 {
     // Convert the character into a `u32`, then take the first 8 bits
     // Safety: bit shift forces the `u32` to fit into `u8`
-    (char as u32 >> (u32::BITS - u8::BITS)).try_into().unwrap()
+    (char as u32 >> (u32::BITS - u8::BITS)) as u8
 }
 
 /// For a given set of arguments, parse and return the IPv4 database into a clean `IpAddrMap`.
 fn parse_ipv4(arguments: &Arguments) -> IpAddrMap<Ipv4Addr, Country> {
     // Safety: `arguments::get_config()` implements default values
-    let ipv4_path = arguments.ipv4_path.clone().unwrap();
-    let ipv4_len = arguments.ipv4_len.unwrap();
-    let ipv4_comment = arguments.ipv4_comment.map(char_to_byte);
+    let path = arguments.ipv4_path.clone().unwrap();
+    let length = arguments.ipv4_len.unwrap();
+    let comment = arguments.ipv4_comment.map(char_to_byte); // Take the first byte of internal `u32`
 
-    let mut map = ip_geo::ipv4::parse_ipv4_file(ipv4_path, ipv4_len, ipv4_comment);
+    let mut map = ip_geo::ipv4::parse_ipv4_file(path, length, comment);
     map.cleanup();
 
     map
