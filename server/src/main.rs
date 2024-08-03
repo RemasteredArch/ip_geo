@@ -22,7 +22,11 @@ use std::{
     net::{Ipv4Addr, Ipv6Addr},
     sync::Arc,
 };
-use warp::{http::StatusCode, reply::with_status, Reply};
+use warp::{
+    http::StatusCode,
+    reply::{with_status, WithStatus},
+    Reply,
+};
 
 use warp::Filter;
 
@@ -56,9 +60,12 @@ pub async fn main() {
 ///
 /// Assumes that the `IpAddrMap` is clean, otherwise it return an internal server error (code 500).
 fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>) -> impl Reply {
-    match ip_map.try_search(ip_addr) {
-        Ok(country) => with_status(country.name.to_string(), StatusCode::OK),
-        Err(error) => match error {
+    fn success(country: &Country) -> WithStatus<String> {
+        with_status(country.name.to_string(), StatusCode::OK)
+    }
+
+    fn error(error: ip_geo::Error) -> WithStatus<String> {
+        match error {
             ip_geo::Error::NoValueFound => with_status(
                 "no country associated with IP address".to_string(),
                 StatusCode::NOT_FOUND,
@@ -67,7 +74,12 @@ fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>
                 eprintln!("Error 500: request resulted in error: '{error}'");
                 with_status(error.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
             }
-        },
+        }
+    }
+
+    match ip_map.try_search(ip_addr) {
+        Ok(country) => success(country),
+        Err(err) => error(err),
     }
 }
 
