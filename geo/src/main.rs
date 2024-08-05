@@ -15,14 +15,10 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use std::{
-    collections::HashMap,
-    fmt::Display,
-    process::Command,
-    str::{self, FromStr},
-};
+use std::{collections::HashMap, process::Command, str::FromStr};
 
-mod countries;
+mod country;
+use country::{Country, CountryPair};
 mod wikidata;
 
 use chrono::{SecondsFormat, Utc};
@@ -138,155 +134,25 @@ fn print_country_list_as_rust_hashmap(countries: &[Country]) {
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashMap;
+use std::{{collections::HashMap, rc::Rc}};
+
+struct Country {{
+    name: Box<str>,          // Ex. Belgium
+    code: Rc<str>,           // Ex. BE
+    coordinates: (f64, f64), // Ex. (4.668055555, 50.641111111)
+}}
 
 /// A map of countries, with the ISO 3166-1 alpha-2 code as the key.
 #[rustfmt::skip]
-pub fn get_countries() -> HashMap<String, String> {{HashMap::from([
+pub fn get_countries() -> HashMap<Rc<str>, Country> {{HashMap::from([
 "#
     );
 
     countries
         .iter()
-        .for_each(|c| println!("    {},", c.as_rust_map_entry()));
+        .for_each(|c| println!("{},", c.as_rust_map_entry(4)));
 
     println!("])}}");
-}
-
-/// Represents a country and its ISO 3166-1 alpha-2 code, alongside a Wikidata ID (if available).
-#[derive(Debug)]
-#[allow(dead_code)]
-struct Country {
-    name: Box<str>,          // Ex. Belgium
-    code: Box<str>,          // Ex. BE
-    coordinates: (f64, f64), // Ex. (4.668055555, 50.641111111)
-}
-
-#[allow(dead_code)]
-impl Country {
-    /// Create a new `Country`.
-    fn new(code: impl AsRef<str>, name: impl AsRef<str>, coordinates: (f64, f64)) -> Self {
-        Self {
-            name: name.as_ref().into(),
-            code: code.as_ref().into(),
-            coordinates,
-        }
-    }
-
-    /// Create a new `Country` from a `CountryPair` and a Wikidata query using `CountryPair.code`.
-    fn from_pair(pair: &CountryPair) -> Self {
-        let name = pair.name.clone();
-        let code = pair.code.clone();
-        let coordinates = wikidata::query_for_coords_by_code(&code);
-
-        Self {
-            name,
-            code,
-            coordinates,
-        }
-    }
-
-    /// Create a new `Country` from a `CountryPair` and a Wikidata query using `id`.
-    fn from_pair_and_id(pair: &CountryPair, id: impl AsRef<str>) -> Self {
-        let name = pair.name.clone();
-        let code = pair.code.clone();
-        let coordinates = wikidata::query_for_coords_by_id(id.as_ref());
-
-        Self {
-            name,
-            code,
-            coordinates,
-        }
-    }
-
-    /// Formats contents as a valid entry of `CountryData` in a `HashMap`.
-    ///
-    /// Example usage:
-    ///
-    /// ```rust
-    /// assert_eq!(
-    ///     Country::new("EX", "Example").as_rust_map_entry().as_ref(),
-    ///     r#"("EX".into(), "Example".into())"#
-    /// );
-    /// ```
-    fn as_rust_map_entry(&self) -> Box<str> {
-        let (code, name) = self.contents_as_strings();
-
-        format!("({code}, {name})").into_boxed_str()
-    }
-
-    /// Returns self as a tuple of four Strings holding string literals: `(code, name)`
-    ///
-    /// Example usage:
-    ///
-    /// ```
-    /// assert_eq!(
-    ///     Country::new_without_id("EX", "Example").contents_as_strings()
-    ///     ("\"EX\".into()", "\"Example\".into()")
-    /// );
-    /// ```
-    fn contents_as_strings(&self) -> (Box<str>, Box<str>) {
-        /// Wraps a string in double quotes.
-        fn as_str<T: Display>(str: T) -> Box<str> {
-            format!("\"{}\".into()", str).into_boxed_str()
-        }
-
-        let (code, name) = self.as_tuple();
-
-        (as_str(code), as_str(name))
-    }
-
-    /// Returns the struct's internal fields as a tuple: `(code, name)`
-    ///
-    /// ```rust
-    /// assert_eq!(
-    ///     Country::new("EX", "Example").as_tuple(),
-    ///     (Box::new("EX"), Box::new("Example"))
-    /// );
-    /// ```
-    fn as_tuple(&self) -> (Box<str>, Box<str>) {
-        (self.code.clone(), self.name.clone())
-    }
-}
-
-struct CountryPair {
-    name: Box<str>, // Ex. Belgium
-    code: Box<str>, // Ex. BE
-}
-
-impl CountryPair {
-    /// Create a new country without a Wikidata ID.
-    fn new(code: impl AsRef<str>, name: impl AsRef<str>) -> Self {
-        Self {
-            name: name.as_ref().into(),
-            code: code.as_ref().into(),
-        }
-    }
-}
-
-impl FromStr for CountryPair {
-    type Err = Error;
-
-    /// Parse a line into a `Country`.
-    ///
-    /// Expects a two letter line in this format:
-    ///
-    /// ```text
-    /// cc country name
-    /// ```
-    ///
-    /// Where `cc` is a two letter country code, and `country name` is an arbitrary string.
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (code, name) = s
-            .split_once(' ')
-            .ok_or(Error::InvalidCountryLine(s.into()))?;
-
-        if code.len() != 2 {
-            return Err(Error::InvalidCode(code.into()));
-        }
-
-        Ok(Self::new(code, name))
-    }
 }
 
 /// Returns a list of countries.
@@ -363,13 +229,11 @@ fn call(command: &str) -> Result<Vec<Box<str>>, Error> {
         Command::new("sh").args(["-c", command]).output()?
     };
 
-    // Split into lines
-    // Is this broken by Windows' CRLF?
-    let output = output.stdout.split(|c| *c == b'\n');
+    // Parse into a string
+    let output = std::str::from_utf8(&output.stdout)?;
 
-    // Parse each line from bytes into strings
-    // What can I do about that unwrap?
-    let lines = output.map(|s| str::from_utf8(s).unwrap().into());
+    // Split into lines of `Box<str>`
+    let output = output.lines().map(Into::into);
 
-    Ok(lines.collect())
+    Ok(output.collect())
 }

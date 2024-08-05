@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use std::str::{self, FromStr};
+use std::str::FromStr;
 
 use crate::Error;
 use mediawiki::ApiSync;
@@ -48,16 +48,11 @@ WHERE {{
 "#
     );
 
-    dbg!(id);
-
     let result = wikidata_query(&query).expect("the result of a Wikidata query");
     let result = result.first().expect("a value from Wikidata");
 
     let point = get_str_value(result, "location").expect("a `Point(f64, f64)`");
-    let points = parse_coords(point).ok_or(Error::InvalidPoint).unwrap();
-    dbg!(point, points);
-
-    points
+    parse_coords(point).ok_or(Error::InvalidPoint).unwrap()
 }
 
 /// Query Wikidata for a country's location based on a two-letter code.
@@ -95,16 +90,11 @@ WHERE {{
 "#
     );
 
-    dbg!(code);
-
     let result = wikidata_query(&query).expect("the result of a Wikidata query");
     let result = result.first().expect("a value from Wikidata");
 
     let point = get_str_value(result, "location").expect("a `Point(f64, f64)`");
-    let points = parse_coords(point).ok_or(Error::InvalidPoint).unwrap();
-    dbg!(point, points);
-
-    points
+    parse_coords(point).ok_or(Error::InvalidPoint).unwrap()
 }
 
 /// Get the internal string value of a given field that holds a string in a Serde JSON value.
