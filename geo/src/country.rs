@@ -15,12 +15,15 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use std::{fmt::Display, str::FromStr};
+use std::{
+    fmt::{Display, Write},
+    str::FromStr,
+};
 
 use crate::{wikidata, Error};
 
 /// Represents a country and its ISO 3166-1 alpha-2 code, alongside a Wikidata ID (if available).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Country {
     pub name: Box<str>,          // Ex. Belgium
     pub code: Box<str>,          // Ex. BE
@@ -70,37 +73,46 @@ impl Country {
     /// ```rust
     /// assert_eq!(
     ///     Country::new("EX", "Example", (1.0, 1.0)).as_rust_map_entry(0).as_ref(),
-    ///     r"#{let ex = Country {
+    ///     r#"{let ex = Country {
     ///     name: "Example".into(),
     ///     code: "EX".into(),
     ///     coordinates: (1.0, -1.0),
-    /// }; (ex.code.clone(), ex)},#"
+    /// }; (ex.code.clone(), ex)},
+    /// "#
     /// ])
     /// );
     /// ```
     pub fn as_rust_map_entry(&self, indent: u8) -> Box<str> {
-        let (code, name, coordinates) = self.contents_as_strings();
-        let code_lower = self.code.to_lowercase();
+        fn indent_string(str: &str, indent: u8) -> Box<str> {
+            if indent == 0 {
+                return str.to_string().into_boxed_str();
+            }
 
-        // Ex.:
-        //
-        let mut output = format!(
-            r"#{{let {code_lower} = Country {{
+            let indent = " ".repeat(indent as usize);
+
+            let concat = move |mut output: String, line: &str| {
+                writeln!(output, "{indent}{line}").expect("string concatenation");
+                output
+            };
+
+            str.lines().fold(String::new(), concat).into_boxed_str()
+        }
+
+        let (code, name, coordinates) = self.contents_as_strings();
+        let code_lower = match self.code.as_ref() {
+            "??" => "unknown",
+            _ => &self.code.to_lowercase(),
+        };
+
+        let output = format!(
+            r#"{{let {code_lower} = Country {{
     name: {name},
     code: {code},
     coordinates: {coordinates},
-}}; ({code_lower}.code.clone(), {code_lower})}},#"
+}}; ({code_lower}.code.clone(), {code_lower})}},"#
         );
 
-        if indent > 0 {
-            let indent = " ".repeat(indent as usize);
-            output = output
-                .lines()
-                .map(|line| format!("{indent}{line}"))
-                .collect();
-        }
-
-        output.into_boxed_str()
+        indent_string(&output, indent)
     }
 
     /// Returns self as a tuple of four Strings holding string literals: `(code, name)`
@@ -114,13 +126,24 @@ impl Country {
     /// );
     /// ```
     fn contents_as_strings(&self) -> (Box<str>, Box<str>, Box<str>) {
-        /// Wraps a string in double quotes.
+        /// Wraps a string in `"` and `.into()`.
         fn str_as_str<T: Display>(str: T) -> Box<str> {
             format!("\"{}\".into()", str).into_boxed_str()
         }
 
+        /// Format a floats tuple into a valid Rust tuple with float literals.
         fn f_tuple_as_str(tuple: (f64, f64)) -> Box<str> {
-            format!("({}, {})", tuple.0, tuple.1).into_boxed_str()
+            // Formats a float into a `String` that *will* have a decimal point
+            let fmt_f = |f: f64| {
+                let f = f.to_string();
+
+                match !f.contains('.') {
+                    true => format!("{}.0", f),
+                    false => f,
+                }
+            };
+
+            format!("({}, {})", fmt_f(tuple.0), fmt_f(tuple.1)).into_boxed_str()
         }
 
         let (code, name, coordinates) = self.as_tuple();
@@ -145,6 +168,7 @@ impl Country {
     }
 }
 
+#[derive(Clone)]
 pub struct CountryPair {
     pub name: Box<str>, // Ex. Belgium
     pub code: Box<str>, // Ex. BE

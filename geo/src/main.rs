@@ -17,58 +17,15 @@
 
 use std::{collections::HashMap, process::Command, str::FromStr};
 
+use chrono::{SecondsFormat, Utc};
+
 mod country;
 use country::{Country, CountryPair};
+
+mod error;
+use error::Error;
+
 mod wikidata;
-
-use chrono::{SecondsFormat, Utc};
-use mediawiki::MediaWikiError;
-
-/// Represents all possible error states of this module.
-#[derive(thiserror::Error, Debug)]
-pub enum Error {
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
-
-    #[error(transparent)]
-    StrFromUtf8(#[from] core::str::Utf8Error),
-
-    #[error("can't parse line '{0}' into Country")]
-    InvalidCountryLine(Box<str>),
-
-    #[error("expected two letter country code, received '{0}'")]
-    InvalidCode(Box<str>),
-
-    #[error("out of bounds array access")]
-    OutOfBounds,
-
-    #[error("can't split url")]
-    UrlSplit,
-
-    #[error(transparent)]
-    Wiki(#[from] MediaWikiError),
-
-    #[error("iterator operation failed")]
-    Iter, // Could probably be more specific
-
-    #[error("can't map value to object")]
-    InvalidObject,
-
-    #[error("can't map value to array")]
-    InvalidArray,
-
-    #[error("can't convert value to string")]
-    InvalidString,
-
-    #[error("can't convert string to coordinates")]
-    InvalidPoint,
-
-    #[error("missing results in response")]
-    MissingResults,
-
-    #[error("missing binding in value")]
-    MissingBindings,
-}
 
 fn main() {
     // Tor's additions to the database from libloc
@@ -88,7 +45,7 @@ fn main() {
 
     // dbg!(&countries);
     // print_country_list_as_code_and_name(&countries);
-    print_country_list_as_rust_hashmap(&countries);
+    print_country_list_as_rust_hashmap(&countries, 4);
 }
 
 /// Formats and prints a list of countries' codes and names separated by a space
@@ -110,7 +67,7 @@ fn print_country_list_as_code_and_name(countries: &[Country]) {
 
 /// Formats prints a list of countries as valid Rust code that returns a `HashMap`.
 #[allow(dead_code)]
-fn print_country_list_as_rust_hashmap(countries: &[Country]) {
+fn print_country_list_as_rust_hashmap(countries: &[Country], indent: u8) {
     let location_version = get_location_version().unwrap();
     let date_time = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true); // Ex. 2024-07-21T04:11:07Z
 
@@ -136,7 +93,7 @@ fn print_country_list_as_rust_hashmap(countries: &[Country]) {
 
 use std::{{collections::HashMap, rc::Rc}};
 
-struct Country {{
+pub struct Country {{
     name: Box<str>,          // Ex. Belgium
     code: Rc<str>,           // Ex. BE
     coordinates: (f64, f64), // Ex. (4.668055555, 50.641111111)
@@ -148,9 +105,20 @@ pub fn get_countries() -> HashMap<Rc<str>, Country> {{HashMap::from([
 "#
     );
 
-    countries
-        .iter()
-        .for_each(|c| println!("{},", c.as_rust_map_entry(4)));
+    // Print the first value without a leading newline
+    print!(
+        "{}",
+        countries
+            .first()
+            .expect("a country")
+            .as_rust_map_entry(indent)
+    );
+
+    // Print all but the first with blank lines separating them
+    countries.iter().skip(1).for_each(|c: &Country| {
+        println!();
+        print!("{}", c.as_rust_map_entry(indent))
+    });
 
     println!("])}}");
 }
@@ -184,6 +152,9 @@ fn get_country_list(
 
     countries.append(&mut additional_countries);
     countries.dedup_by_key(|c| c.code.clone());
+
+    // DEBUG: take only the last ten, to avoid long wait times while testing
+    // countries = countries.last_chunk::<10>().ok_or(Error::Iter)?.to_vec();
 
     // For a given `CountryPair`, create a `Country` from it using the appropriate method.
     let from_pair = move |pair: &CountryPair| match pair.code.as_ref() {
