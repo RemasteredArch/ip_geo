@@ -38,6 +38,7 @@ pub enum Error {
     #[error(transparent)]
     Wiki(#[from] MediaWikiError),
 
+    #[allow(dead_code)] // Is sometimes used for debugging
     #[error("iterator operation failed")]
     Iter, // Could probably be more specific
 

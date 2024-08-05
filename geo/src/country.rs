@@ -101,7 +101,7 @@ impl Country {
         let (code, name, coordinates) = self.contents_as_strings();
         let code_lower = match self.code.as_ref() {
             "??" => "unknown",
-            _ => &self.code.to_lowercase(),
+            _ => &format!("c_{}", self.code.to_lowercase()),
         };
 
         let output = format!(
