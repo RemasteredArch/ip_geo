@@ -17,7 +17,6 @@
 
 use clap::Parser;
 use ip_geo::{country_list::Country, IpAddrMap};
-use serde_derive::Serialize;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
     sync::Arc,
@@ -107,24 +106,4 @@ fn parse_ipv6(arguments: &Arguments) -> IpAddrMap<Ipv6Addr, Country> {
     map.cleanup();
 
     map
-}
-
-#[derive(Serialize)]
-struct CountryApi {
-    code: Box<str>,
-    name: Box<str>,
-}
-
-impl CountryApi {
-    fn new(code: Box<str>, name: Box<str>) -> Self {
-        Self { code, name }
-    }
-}
-
-impl From<Country> for CountryApi {
-    fn from(value: Country) -> Self {
-        let to_box = |s: Arc<str>| s.to_string().into_boxed_str();
-
-        CountryApi::new(to_box(value.code), to_box(value.name))
-    }
 }
