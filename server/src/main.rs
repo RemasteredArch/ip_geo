@@ -16,7 +16,7 @@
 // not, see <https://www.gnu.org/licenses/>.
 
 use clap::Parser;
-use ip_geo::{country::Country, IpAddrMap};
+use ip_geo::{country_list::Country, IpAddrMap};
 use serde_derive::Serialize;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
@@ -123,6 +123,8 @@ impl CountryApi {
 
 impl From<Country> for CountryApi {
     fn from(value: Country) -> Self {
-        CountryApi::new(value.code, value.name)
+        let to_box = |s: Arc<str>| s.to_string().into_boxed_str();
+
+        CountryApi::new(to_box(value.code), to_box(value.name))
     }
 }
