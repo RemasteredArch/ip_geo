@@ -114,9 +114,7 @@ fn parse_ipv6(arguments: &Arguments) -> IpAddrMap<Ipv6Addr, Country> {
 /// Returns JSON in the format of:
 ///
 /// ```json
-/// {
-///     "error": "example error text"
-/// }
+/// {"error":"example error text"}
 /// ```
 fn json_str_error(error: &str, code: StatusCode) -> WithStatus<Json> {
     #[derive(Serialize)]
