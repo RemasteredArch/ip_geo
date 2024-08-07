@@ -18,7 +18,12 @@
 
 use clap::Parser;
 use serde::Deserialize;
-use std::{fmt::Display, fs, path::Path};
+use std::{
+    fmt::Display,
+    fs,
+    net::{Ipv4Addr, Ipv6Addr},
+    path::Path,
+};
 
 /// Represents the command-line arguments of the program.
 #[derive(Parser, Deserialize, Debug)]
@@ -27,6 +32,14 @@ pub struct Arguments {
     #[arg(short = 'f', long = "config-path")]
     #[serde(skip, default)]
     pub config_path: Option<Box<Path>>,
+
+    #[arg(short = '4', long = "IPv4-addr")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub ipv4_addr: Option<Ipv4Addr>,
+
+    #[arg(long = "IPv4-port")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub ipv4_port: Option<u16>,
 
     #[arg(long = "IPv4-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -39,6 +52,14 @@ pub struct Arguments {
     #[arg(long = "IPv4-comment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv4_comment: Option<char>,
+
+    #[arg(short = '6', long = "IPv6-addr")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub ipv6_addr: Option<Ipv6Addr>,
+
+    #[arg(long = "IPv6-port")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub ipv6_port: Option<u16>,
 
     #[arg(long = "IPv6-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -77,6 +98,10 @@ pub fn get_config(arguments: Arguments) -> Arguments {
         .or_else(|| from_config.as_ref().and_then(|v| v.config_path.clone()))
         .unwrap_or_else(get_default_config_path);
 
+    // let ipv4_addr = arguments.ipv4_addr.unwrap_or(Ipv4Addr::LOCALHOST);
+
+    // let ipv4_port = arguments.ipv4_port.unwrap_or(26_000);
+
     let ipv4_path = arguments
         .ipv4_path
         .unwrap_or_else(|| Path::new("/usr/share/tor/geoip").into());
@@ -113,9 +138,13 @@ pub fn get_config(arguments: Arguments) -> Arguments {
 
     Arguments {
         config_path: Some(config),
+        ipv4_addr: todo!(),
+        ipv4_port: todo!(),
         ipv4_path: Some(ipv4_path),
         ipv4_len: Some(ipv4_len),
         ipv4_comment: Some(ipv4_comment),
+        ipv6_addr: todo!(),
+        ipv6_port: todo!(),
         ipv6_path: Some(ipv6_path),
         ipv6_len: Some(ipv6_len),
         ipv6_comment: Some(ipv6_comment),

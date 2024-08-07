@@ -16,7 +16,7 @@
 // not, see <https://www.gnu.org/licenses/>.
 
 use clap::Parser;
-use ip_geo::{country_list::Country, IpAddrMap};
+use ip_geo::{country_list::Country, ipv4, IpAddrMap};
 use serde::Serialize;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
@@ -53,7 +53,13 @@ pub async fn main() {
 
     let routes = warp::get().and(warp::path("v0")).and(ipv4.or(ipv6));
 
-    warp::serve(routes).run(([127, 0, 0, 1], port)).await;
+    let ipv4_addr = Ipv4Addr::LOCALHOST;
+    let ipv6_addr = Ipv6Addr::LOCALHOST;
+
+    tokio::join!(
+        warp::serve(routes.clone()).run((ipv4_addr, port)),
+        warp::serve(routes).run((ipv6_addr, port))
+    );
 }
 
 /// Search an IPv4 address map for an IP address.
