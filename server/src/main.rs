@@ -17,13 +17,14 @@
 
 use clap::Parser;
 use ip_geo::{country_list::Country, IpAddrMap};
+use serde::Serialize;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
     sync::Arc,
 };
 use warp::{
     http::StatusCode,
-    reply::{with_status, WithStatus},
+    reply::{json, with_status, Json, WithStatus},
     Reply,
 };
 
@@ -59,19 +60,19 @@ pub async fn main() {
 ///
 /// Assumes that the `IpAddrMap` is clean, otherwise it return an internal server error (code 500).
 fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>) -> impl Reply {
-    fn success(country: &Country) -> WithStatus<String> {
-        with_status(country.name.to_string(), StatusCode::OK)
+    fn success(country: &Country) -> WithStatus<Json> {
+        json_with_status(country, StatusCode::OK)
     }
 
-    fn error(error: ip_geo::Error) -> WithStatus<String> {
+    fn error(error: ip_geo::Error) -> WithStatus<Json> {
         match error {
-            ip_geo::Error::NoValueFound => with_status(
-                "no country associated with IP address".to_string(),
+            ip_geo::Error::NoValueFound => json_str_error(
+                "no country associated with IP address",
                 StatusCode::NOT_FOUND,
             ),
             _ => {
                 eprintln!("Error 500: request resulted in error: '{error}'");
-                with_status(error.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+                json_str_error(&error.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
             }
         }
     }
@@ -106,4 +107,27 @@ fn parse_ipv6(arguments: &Arguments) -> IpAddrMap<Ipv6Addr, Country> {
     map.cleanup();
 
     map
+}
+
+/// Returns a JSON reply with a given status.
+///
+/// Returns JSON in the format of:
+///
+/// ```json
+/// {
+///     "error": "example error text"
+/// }
+/// ```
+fn json_str_error(error: &str, code: StatusCode) -> WithStatus<Json> {
+    #[derive(Serialize)]
+    struct SerializableError<'s> {
+        error: &'s str,
+    }
+
+    json_with_status(&SerializableError { error }, code)
+}
+
+/// Returns a JSON reply with the given contents and status code.
+fn json_with_status(contents: &impl Serialize, code: StatusCode) -> WithStatus<Json> {
+    with_status(json(contents), code)
 }
