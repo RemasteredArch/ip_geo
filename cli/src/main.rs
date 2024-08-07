@@ -19,7 +19,7 @@
 #![allow(dead_code)]
 
 use clap::Parser;
-use ip_geo::country::Country;
+use ip_geo::{country_list::Country, Error};
 
 mod arguments;
 use arguments::{Arguments, RunType};
@@ -35,18 +35,18 @@ fn main() {
 }
 
 /// For a given `Country`, print ISO 3166-1 alpha-2 code and a country name (ex. `BE Belgium`).
-fn print_country(country: Result<Country, ip_geo::Error>) {
+fn print_country(country: Result<Country, Error>) {
     match country {
         Ok(country) => println!("{} {}", country.code, country.name),
         Err(error) => match error {
-            ip_geo::Error::NoValueFound => println!("No country found!"),
+            Error::NoValueFound => println!("No country found!"),
             _ => eprintln!("{error}"),
         },
     }
 }
 
 /// For a given IPv4 address (contained in `arguments`), find the country it is associated with.
-fn find_ipv4(arguments: Arguments) -> Result<Country, ip_geo::Error> {
+fn find_ipv4(arguments: Arguments) -> Result<Country, Error> {
     let mut ipv4_map = ip_geo::ipv4::parse_ipv4_file(
         arguments
             .ipv4_path
@@ -63,7 +63,7 @@ fn find_ipv4(arguments: Arguments) -> Result<Country, ip_geo::Error> {
 }
 
 /// For a given IPv6 address (contained in `arguments`), find the country it is associated with.
-fn find_ipv6(arguments: Arguments) -> Result<Country, ip_geo::Error> {
+fn find_ipv6(arguments: Arguments) -> Result<Country, Error> {
     let mut ipv6_map = ip_geo::ipv6::parse_ipv6_file(
         arguments
             .ipv6_path
@@ -131,7 +131,7 @@ mod tests {
             }
         }
 
-        fn get_code(addr: Ipv4Addr, path: Box<Path>) -> Box<str> {
+        fn get_code(addr: Ipv4Addr, path: Box<Path>) -> std::sync::Arc<str> {
             find_ipv4(gen_args(addr, path)).unwrap().code
         }
 
@@ -176,7 +176,7 @@ mod tests {
             }
         }
 
-        fn get_code(addr: Ipv6Addr, path: Box<Path>) -> Box<str> {
+        fn get_code(addr: Ipv6Addr, path: Box<Path>) -> std::sync::Arc<str> {
             find_ipv6(gen_args(addr, path)).unwrap().code
         }
 

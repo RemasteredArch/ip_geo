@@ -16,12 +16,15 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use crate::country::Country;
-use crate::{country_list, IpAddrEntry, IpAddrMap};
-use serde::de::Unexpected;
-use serde::{de::Visitor, Deserialize, Deserializer};
-use std::str::FromStr;
-use std::{fs, net::Ipv4Addr, path::Path};
+use crate::{
+    country_list::{get_countries, Country},
+    IpAddrEntry, IpAddrMap,
+};
+use serde::{
+    de::{Unexpected, Visitor},
+    Deserialize, Deserializer,
+};
+use std::{fs, net::Ipv4Addr, path::Path, str::FromStr};
 
 /// Stores a range of IPv4 addresses and a value.
 ///
@@ -101,7 +104,7 @@ pub fn parse_ipv4_file(
         #[serde(deserialize_with = "deserialize_ipv4")]
         end: Ipv4Addr,
 
-        country_code: String,
+        country_code: Box<str>,
     }
 
     let file = fs::File::open(&path)
@@ -112,18 +115,22 @@ pub fn parse_ipv4_file(
         .from_reader(file);
 
     let mut map = IpAddrMap::new_with_capacity(len);
-    let countries = country_list::get_countries();
+    let countries = get_countries();
 
     for entry in reader.deserialize() {
         let data: Schema = entry.unwrap();
 
-        if let Some(country) = Country::from_code(&data.country_code, &countries) {
-            // If not an unrecognized IP block,
-            if country.code != "??".into() {
-                map.insert(Ipv4AddrEntry::new(data.start, data.end, country).unwrap());
+        let code = data.country_code.as_ref();
+
+        // Ensure that it is a recognized country
+        match countries.get(code).cloned() {
+            Some(country) => {
+                // Only add ranges with associated countries
+                if country.code != "??".into() {
+                    map.insert(Ipv4AddrEntry::new(data.start, data.end, country).unwrap());
+                }
             }
-        } else {
-            eprintln!("Unrecognized country or region '{}'!", data.country_code);
+            None => eprintln!("Unrecognized country or region '{}'!", data.country_code),
         }
     }
 

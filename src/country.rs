@@ -15,33 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::HashMap;
-
-/// Represents a country.
-#[derive(Clone, Debug)]
-pub struct Country {
-    /// The two letter country code.
-    ///
-    /// Ex. "BE" for Belgium.
-    pub code: Box<str>,
-
-    /// The full name of the country.
-    ///
-    /// Ex. "Belgium".
-    pub name: Box<str>,
-}
-
-impl Country {
-    /// Creates a country from a country code and a map of <country code, country name>.
-    pub fn from_code(code: &str, country_map: &HashMap<String, String>) -> Option<Self> {
-        let (code, name) = country_map.get_key_value(code)?;
-
-        Some(Country {
-            code: code.clone().into_boxed_str(),
-            name: name.clone().into_boxed_str(),
-        })
-    }
-}
+use crate::country_list::Country;
 
 impl PartialEq for Country {
     fn eq(&self, other: &Self) -> bool {

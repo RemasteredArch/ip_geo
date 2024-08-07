@@ -91,17 +91,28 @@ fn print_country_list_as_rust_hashmap(countries: &[Country], indent: u8) {
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use std::{{collections::HashMap, rc::Rc}};
+use std::{{collections::HashMap, sync::Arc}};
 
+/// Represents a country or other geographic region.
+#[derive(Clone, Debug)]
 pub struct Country {{
-    name: Box<str>,          // Ex. Belgium
-    code: Rc<str>,           // Ex. BE
-    coordinates: (f64, f64), // Ex. (4.668055555, 50.641111111)
+    /// The full name of the country.
+    ///
+    /// Ex. "Belgium".
+    pub name: Arc<str>,
+    /// The two letter country code.
+    ///
+    /// Ex. "BE" for Belgium.
+    pub code: Arc<str>,
+    /// The coordinates of the center of the country.
+    ///
+    /// Ex. `(4.668055555, 50.641111111)`.
+    pub coordinates: (f64, f64),
 }}
 
 /// A map of countries, with the ISO 3166-1 alpha-2 code as the key.
 #[rustfmt::skip]
-pub fn get_countries() -> HashMap<Rc<str>, Country> {{HashMap::from([
+pub fn get_countries() -> HashMap<Arc<str>, Country> {{HashMap::from([
 "#
     );
 
