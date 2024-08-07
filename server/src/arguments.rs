@@ -16,14 +16,14 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use clap::Parser;
-use serde::Deserialize;
 use std::{
-    fmt::Display,
     fs,
     net::{Ipv4Addr, Ipv6Addr},
     path::Path,
 };
+
+use clap::Parser;
+use serde::Deserialize;
 
 /// Represents the command-line arguments of the program.
 #[derive(Parser, Deserialize, Debug)]
@@ -72,35 +72,28 @@ pub struct Arguments {
     #[arg(long = "IPv6-comment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv6_comment: Option<char>,
-
-    #[arg(short = 'p', long = "port")]
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub port: Option<u16>,
-}
-
-impl Display for Arguments {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Config:")?;
-        writeln!(f, " * Config: {:?}", self.config_path)?;
-        writeln!(f, " * IPv4 DB: {:?}", self.ipv4_path)?;
-        writeln!(f, " * IPv6 DB: {:?}", self.ipv6_path)?;
-        writeln!(f, " * Server port: {:?}", self.port)
-    }
 }
 
 /// For a given `Arguments` result from Clap, return `arguments` with defaults inserted.
 pub fn get_config(arguments: Arguments) -> Arguments {
     let from_config = get_config_file_arguments(&arguments).and_then(|v| v.ok());
+    let from_config = from_config.as_ref();
 
     // does this need to be read from config file?
     let config = arguments
         .config_path
-        .or_else(|| from_config.as_ref().and_then(|v| v.config_path.clone()))
+        .or_else(|| from_config.and_then(|v| v.config_path.clone()))
         .unwrap_or_else(get_default_config_path);
 
-    // let ipv4_addr = arguments.ipv4_addr.unwrap_or(Ipv4Addr::LOCALHOST);
+    let ipv4_addr = arguments
+        .ipv4_addr
+        .or_else(|| from_config.and_then(|v| v.ipv4_addr))
+        .unwrap_or(Ipv4Addr::LOCALHOST);
 
-    // let ipv4_port = arguments.ipv4_port.unwrap_or(26_000);
+    let ipv4_port = arguments
+        .ipv4_port
+        .or_else(|| from_config.and_then(|v| v.ipv4_port))
+        .unwrap_or(26_000);
 
     let ipv4_path = arguments
         .ipv4_path
@@ -108,47 +101,51 @@ pub fn get_config(arguments: Arguments) -> Arguments {
 
     let ipv4_len = arguments
         .ipv4_len
-        .or_else(|| from_config.as_ref().and_then(|v| v.ipv4_len))
+        .or_else(|| from_config.and_then(|v| v.ipv4_len))
         .unwrap_or(200_000);
 
     let ipv4_comment = arguments
         .ipv4_comment
-        .or_else(|| from_config.as_ref().and_then(|v| v.ipv4_comment))
+        .or_else(|| from_config.and_then(|v| v.ipv4_comment))
         .unwrap_or('#');
+
+    let ipv6_addr = arguments
+        .ipv6_addr
+        .or_else(|| from_config.and_then(|v| v.ipv6_addr))
+        .unwrap_or(Ipv6Addr::LOCALHOST);
+
+    let ipv6_port = arguments
+        .ipv6_port
+        .or_else(|| from_config.and_then(|v| v.ipv6_port))
+        .unwrap_or(26_000);
 
     let ipv6_path = arguments
         .ipv6_path
-        .or_else(|| from_config.as_ref().and_then(|v| v.ipv6_path.clone()))
+        .or_else(|| from_config.and_then(|v| v.ipv6_path.clone()))
         .unwrap_or_else(|| Path::new("/usr/share/tor/geoip6").into());
 
     let ipv6_len = arguments
         .ipv6_len
-        .or_else(|| from_config.as_ref().and_then(|v| v.ipv6_len))
+        .or_else(|| from_config.and_then(|v| v.ipv6_len))
         .unwrap_or(60_000);
 
     let ipv6_comment = arguments
         .ipv6_comment
-        .or_else(|| from_config.as_ref().and_then(|v| v.ipv6_comment))
+        .or_else(|| from_config.and_then(|v| v.ipv6_comment))
         .unwrap_or('#');
-
-    let port = arguments
-        .port
-        .or_else(|| from_config.as_ref().and_then(|v| v.port))
-        .unwrap_or(26_000);
 
     Arguments {
         config_path: Some(config),
-        ipv4_addr: todo!(),
-        ipv4_port: todo!(),
+        ipv4_addr: Some(ipv4_addr),
+        ipv4_port: Some(ipv4_port),
         ipv4_path: Some(ipv4_path),
         ipv4_len: Some(ipv4_len),
         ipv4_comment: Some(ipv4_comment),
-        ipv6_addr: todo!(),
-        ipv6_port: todo!(),
+        ipv6_addr: Some(ipv6_addr),
+        ipv6_port: Some(ipv6_port),
         ipv6_path: Some(ipv6_path),
         ipv6_len: Some(ipv6_len),
         ipv6_comment: Some(ipv6_comment),
-        port: Some(port),
     }
 }
 
