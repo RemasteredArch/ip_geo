@@ -11,9 +11,7 @@ dirs = "5.0.1"
 ip_geo = { version = "0.1.0", path = ".." }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_derive = "1.0.204"
+thiserror = "1.0.63"
 tokio = { version = "1.39.2", features = ["full"] }
 toml = "0.8.12"
 warp = "0.3.7"
-
-[dev-dependencies]
-tempfile = "3.10.1"

@@ -33,6 +33,8 @@ use warp::Filter;
 mod arguments;
 use arguments::Arguments;
 
+mod error;
+
 #[tokio::main]
 pub async fn main() {
     let arguments = arguments::get_config(Arguments::parse());

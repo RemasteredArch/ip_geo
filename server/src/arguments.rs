@@ -18,12 +18,15 @@
 
 use std::{
     fs,
-    net::{Ipv4Addr, Ipv6Addr},
+    net::{AddrParseError, Ipv4Addr, Ipv6Addr},
     path::Path,
+    str::FromStr,
 };
 
 use clap::Parser;
 use serde::Deserialize;
+
+use crate::error::Error;
 
 /// Represents the command-line arguments of the program.
 #[derive(Parser, Deserialize, Debug)]
@@ -179,7 +182,47 @@ pub struct AddrPortPair<A: for<'de> Deserialize<'de>> {
 }
 
 pub type Ipv4PortPair = AddrPortPair<Ipv4Addr>;
+
+impl FromStr for Ipv4PortPair {
+    type Err = Error;
+
+    /// Parse an IPv4 address & port pair from a string.
+    ///
+    /// Expects the format of ADDRESS:PORT.
+    /// `127.0.0.1:26000` -> `Self { addr: 127.0.0.1, port: 26000) }`
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // `127.0.0.1:26000` -> (`127.0.0.1`, `26000`)
+        let (addr, port) = s.split_once(':').ok_or(Error::InvalidAddrPortPair)?;
+
+        let addr = Ipv4Addr::from_str(addr).map_err(|_| Error::InvalidAddrPortPair)?;
+        let port = u16::from_str(port).map_err(|_| Error::InvalidAddrPortPair)?;
+
+        Ok(Self { addr, port })
+    }
+}
+
 pub type Ipv6PortPair = AddrPortPair<Ipv6Addr>;
+
+impl FromStr for Ipv6PortPair {
+    type Err = Error;
+
+    /// Parse an IPv6 address & port pair from a string.
+    ///
+    /// Expects the format of ADDRESS:PORT.
+    /// `[::1]:26000` -> `Self { addr: ::1, port: 26000) }`
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // `[::1]:26000` -> (`[::1`, `26000`)
+        let (mut addr, port) = s.split_once("]:").ok_or(Error::InvalidAddrPortPair)?;
+
+        // `[::1` -> `::1`
+        addr = addr.strip_prefix('[').ok_or(Error::InvalidAddrPortPair)?;
+
+        let addr = Ipv6Addr::from_str(addr).map_err(|_| Error::InvalidAddrPortPair)?;
+        let port = u16::from_str(port).map_err(|_| Error::InvalidAddrPortPair)?;
+
+        Ok(Self { addr, port })
+    }
+}
 
 impl<'de> Deserialize<'de> for Ipv4PortPair {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
