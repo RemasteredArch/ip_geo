@@ -80,7 +80,7 @@ pub fn get_config(arguments: Arguments) -> Arguments {
     let from_config = from_config.as_ref();
 
     // does this need to be read from config file?
-    let config = arguments
+    let config_path = arguments
         .config_path
         .or_else(|| from_config.and_then(|v| v.config_path.clone()))
         .unwrap_or_else(get_default_config_path);
@@ -135,7 +135,7 @@ pub fn get_config(arguments: Arguments) -> Arguments {
         .unwrap_or('#');
 
     Arguments {
-        config_path: Some(config),
+        config_path: Some(config_path),
         ipv4_addr: Some(ipv4_addr),
         ipv4_port: Some(ipv4_port),
         ipv4_path: Some(ipv4_path),
@@ -171,4 +171,21 @@ fn get_default_config_path() -> Box<Path> {
         .join(env!("CARGO_PKG_NAME"))
         .with_extension("toml")
         .into_boxed_path()
+}
+
+pub struct AddrPortPair<A: for<'de> Deserialize<'de>> {
+    pub addr: A,
+    pub port: u16,
+}
+
+pub type Ipv4PortPair = AddrPortPair<Ipv4Addr>;
+pub type Ipv6PortPair = AddrPortPair<Ipv6Addr>;
+
+impl<'de> Deserialize<'de> for Ipv4PortPair {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        todo!()
+    }
 }
