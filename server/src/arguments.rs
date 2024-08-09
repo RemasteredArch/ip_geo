@@ -37,51 +37,35 @@ pub struct Arguments {
     #[serde(skip, default)]
     pub config_path: Option<Box<Path>>,
 
-    #[arg(short = '4', long = "IPv4")]
+    #[arg(short = '4', long = "ipv4")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv4_pair: Option<Ipv4PortPair>,
 
-    #[arg(long = "IPv4-addr")]
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv4_addr: Option<Ipv4Addr>,
-
-    #[arg(long = "IPv4-port")]
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv4_port: Option<u16>,
-
-    #[arg(long = "IPv4-path")]
+    #[arg(long = "ipv4-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv4_path: Option<Box<Path>>,
 
-    #[arg(long = "IPv4-length")]
+    #[arg(long = "ipv4-length")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv4_len: Option<usize>,
 
-    #[arg(long = "IPv4-comment")]
+    #[arg(long = "ipv4-comment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv4_comment: Option<char>,
 
-    #[arg(short = '6', long = "IPv6")]
+    #[arg(short = '6', long = "ipv6")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv6_pair: Option<Ipv6PortPair>,
 
-    #[arg(long = "IPv6-addr")]
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv6_addr: Option<Ipv6Addr>,
-
-    #[arg(long = "IPv6-port")]
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv6_port: Option<u16>,
-
-    #[arg(long = "IPv6-path")]
+    #[arg(long = "ipv6-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv6_path: Option<Box<Path>>,
 
-    #[arg(long = "IPv6-length")]
+    #[arg(long = "ipv6-length")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv6_len: Option<usize>,
 
-    #[arg(long = "IPv6-comment")]
+    #[arg(long = "ipv6-comment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv6_comment: Option<char>,
 }
@@ -97,22 +81,12 @@ pub fn get_config(arguments: Arguments) -> Arguments {
         .or_else(|| from_config.and_then(|v| v.config_path.clone()))
         .unwrap_or_else(get_default_config_path);
 
-    let ipv4_addr = arguments
-        .ipv4_addr
-        .or_else(|| from_config.and_then(|v| v.ipv4_addr))
-        .unwrap_or(Ipv4Addr::LOCALHOST);
-
-    let ipv4_port = arguments
-        .ipv4_port
-        .or_else(|| from_config.and_then(|v| v.ipv4_port))
-        .unwrap_or(26_000);
-
     let ipv4_pair = arguments
         .ipv4_pair
         .or_else(|| from_config.and_then(|v| v.ipv4_pair))
         .unwrap_or(Ipv4PortPair {
-            addr: ipv4_addr,
-            port: ipv4_port,
+            addr: Ipv4Addr::LOCALHOST,
+            port: 26_000,
         });
 
     let ipv4_path = arguments
@@ -129,22 +103,12 @@ pub fn get_config(arguments: Arguments) -> Arguments {
         .or_else(|| from_config.and_then(|v| v.ipv4_comment))
         .unwrap_or('#');
 
-    let ipv6_addr = arguments
-        .ipv6_addr
-        .or_else(|| from_config.and_then(|v| v.ipv6_addr))
-        .unwrap_or(Ipv6Addr::LOCALHOST);
-
-    let ipv6_port = arguments
-        .ipv6_port
-        .or_else(|| from_config.and_then(|v| v.ipv6_port))
-        .unwrap_or(26_000);
-
     let ipv6_pair = arguments
         .ipv6_pair
         .or_else(|| from_config.and_then(|v| v.ipv6_pair))
         .unwrap_or(Ipv6PortPair {
-            addr: ipv6_addr,
-            port: ipv6_port,
+            addr: Ipv6Addr::LOCALHOST,
+            port: 26_000,
         });
 
     let ipv6_path = arguments
@@ -165,14 +129,10 @@ pub fn get_config(arguments: Arguments) -> Arguments {
     Arguments {
         config_path: Some(config_path),
         ipv4_pair: Some(ipv4_pair),
-        ipv4_addr: Some(ipv4_addr),
-        ipv4_port: Some(ipv4_port),
         ipv4_path: Some(ipv4_path),
         ipv4_len: Some(ipv4_len),
         ipv4_comment: Some(ipv4_comment),
         ipv6_pair: Some(ipv6_pair),
-        ipv6_addr: Some(ipv6_addr),
-        ipv6_port: Some(ipv6_port),
         ipv6_path: Some(ipv6_path),
         ipv6_len: Some(ipv6_len),
         ipv6_comment: Some(ipv6_comment),
