@@ -18,14 +18,15 @@
 use clap::Parser;
 use ip_geo::{country_list::Country, IpAddrMap};
 use serde::Serialize;
-use std::{
-    net::{Ipv4Addr, Ipv6Addr},
-    sync::Arc,
-};
 use warp::{
     http::StatusCode,
     reply::{json, with_status, Json, WithStatus},
     Reply,
+};
+
+use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    sync::Arc,
 };
 
 use warp::Filter;
@@ -40,8 +41,8 @@ pub async fn main() {
     let arguments = arguments::get_config(Arguments::parse());
 
     // Safety: `arguments::get_config()` implements default values
-    let ipv4_target = (arguments.ipv4_addr.unwrap(), arguments.ipv4_port.unwrap());
-    let ipv6_target = (arguments.ipv6_addr.unwrap(), arguments.ipv6_port.unwrap());
+    let ipv4_target = arguments.ipv4_pair.unwrap();
+    let ipv6_target = arguments.ipv6_pair.unwrap();
 
     let ipv4_map = Arc::new(parse_ipv4(&arguments));
     let ipv6_map = Arc::new(parse_ipv6(&arguments));
@@ -54,15 +55,12 @@ pub async fn main() {
 
     let routes = warp::get().and(warp::path("v0")).and(ipv4.or(ipv6));
 
-    println!("Serving on http://{}:{}/v0/", ipv4_target.0, ipv4_target.1);
-    println!(
-        "Serving on http://[{}]:{}/v0/",
-        ipv6_target.0, ipv6_target.1
-    );
+    println!("Serving on http://{ipv4_target}/v0/");
+    println!("Serving on http://{ipv6_target}/v0/");
 
     tokio::join!(
         warp::serve(routes.clone()).run(ipv4_target),
-        warp::serve(routes).run(ipv6_target)
+        warp::serve(routes).run(ipv6_target),
     );
 }
 

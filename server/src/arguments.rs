@@ -17,8 +17,9 @@
 // not, see <https://www.gnu.org/licenses/>.
 
 use std::{
+    fmt::Display,
     fs,
-    net::{AddrParseError, Ipv4Addr, Ipv6Addr},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr},
     path::Path,
     str::FromStr,
 };
@@ -36,7 +37,11 @@ pub struct Arguments {
     #[serde(skip, default)]
     pub config_path: Option<Box<Path>>,
 
-    #[arg(short = '4', long = "IPv4-addr")]
+    #[arg(short = '4', long = "IPv4")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub ipv4_pair: Option<Ipv4PortPair>,
+
+    #[arg(long = "IPv4-addr")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv4_addr: Option<Ipv4Addr>,
 
@@ -56,7 +61,11 @@ pub struct Arguments {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv4_comment: Option<char>,
 
-    #[arg(short = '6', long = "IPv6-addr")]
+    #[arg(short = '6', long = "IPv6")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub ipv6_pair: Option<Ipv6PortPair>,
+
+    #[arg(long = "IPv6-addr")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv6_addr: Option<Ipv6Addr>,
 
@@ -98,6 +107,14 @@ pub fn get_config(arguments: Arguments) -> Arguments {
         .or_else(|| from_config.and_then(|v| v.ipv4_port))
         .unwrap_or(26_000);
 
+    let ipv4_pair = arguments
+        .ipv4_pair
+        .or_else(|| from_config.and_then(|v| v.ipv4_pair))
+        .unwrap_or(Ipv4PortPair {
+            addr: ipv4_addr,
+            port: ipv4_port,
+        });
+
     let ipv4_path = arguments
         .ipv4_path
         .unwrap_or_else(|| Path::new("/usr/share/tor/geoip").into());
@@ -122,6 +139,14 @@ pub fn get_config(arguments: Arguments) -> Arguments {
         .or_else(|| from_config.and_then(|v| v.ipv6_port))
         .unwrap_or(26_000);
 
+    let ipv6_pair = arguments
+        .ipv6_pair
+        .or_else(|| from_config.and_then(|v| v.ipv6_pair))
+        .unwrap_or(Ipv6PortPair {
+            addr: ipv6_addr,
+            port: ipv6_port,
+        });
+
     let ipv6_path = arguments
         .ipv6_path
         .or_else(|| from_config.and_then(|v| v.ipv6_path.clone()))
@@ -139,11 +164,13 @@ pub fn get_config(arguments: Arguments) -> Arguments {
 
     Arguments {
         config_path: Some(config_path),
+        ipv4_pair: Some(ipv4_pair),
         ipv4_addr: Some(ipv4_addr),
         ipv4_port: Some(ipv4_port),
         ipv4_path: Some(ipv4_path),
         ipv4_len: Some(ipv4_len),
         ipv4_comment: Some(ipv4_comment),
+        ipv6_pair: Some(ipv6_pair),
         ipv6_addr: Some(ipv6_addr),
         ipv6_port: Some(ipv6_port),
         ipv6_path: Some(ipv6_path),
@@ -176,9 +203,24 @@ fn get_default_config_path() -> Box<Path> {
         .into_boxed_path()
 }
 
-pub struct AddrPortPair<A: for<'de> Deserialize<'de>> {
+#[derive(Debug, Clone, Deserialize, Copy)]
+pub struct AddrPortPair<A: Copy + Display> {
     pub addr: A,
     pub port: u16,
+}
+
+impl<A: Copy + Display> AddrPortPair<A> {
+    /// Return the contents of the struct as a tuple of `(addr, port)`.
+    pub fn as_tuple(&self) -> (A, u16) {
+        (self.addr, self.port)
+    }
+}
+
+impl<A: Copy + Display> From<AddrPortPair<A>> for (A, u16) {
+    /// Return the contents of the struct as a tuple of `(addr, port)`.
+    fn from(val: AddrPortPair<A>) -> Self {
+        val.as_tuple()
+    }
 }
 
 pub type Ipv4PortPair = AddrPortPair<Ipv4Addr>;
@@ -198,6 +240,18 @@ impl FromStr for Ipv4PortPair {
         let port = u16::from_str(port).map_err(|_| Error::InvalidAddrPortPair)?;
 
         Ok(Self { addr, port })
+    }
+}
+
+impl Display for Ipv4PortPair {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.addr, self.port)
+    }
+}
+
+impl From<Ipv4PortPair> for std::net::SocketAddr {
+    fn from(value: Ipv4PortPair) -> Self {
+        Self::new(IpAddr::V4(value.addr), value.port)
     }
 }
 
@@ -224,11 +278,14 @@ impl FromStr for Ipv6PortPair {
     }
 }
 
-impl<'de> Deserialize<'de> for Ipv4PortPair {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        todo!()
+impl Display for Ipv6PortPair {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}]:{}", self.addr, self.port)
+    }
+}
+
+impl From<Ipv6PortPair> for std::net::SocketAddr {
+    fn from(value: Ipv6PortPair) -> Self {
+        Self::new(IpAddr::V6(value.addr), value.port)
     }
 }
