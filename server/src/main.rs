@@ -29,12 +29,27 @@ use warp::{
     Reply,
 };
 
+/// For a give Warp routes map, and a list of target `SocketAddr`s, print the targets and serve the
+/// routes on them.
+macro_rules! serve {
+    ( $routes:expr, $( $target:expr ),+ ) => {
+        ::tokio::join!(
+            $({
+                println!("Serving on http://{}/{API_VERSION}/", $target);
+                ::warp::serve($routes.clone()).run($target)
+            }),+
+        );
+    };
+}
+
 use warp::Filter;
 
 mod arguments;
 use arguments::Arguments;
 
 mod error;
+
+static API_VERSION: &str = "v0";
 
 #[tokio::main]
 pub async fn main() {
@@ -53,15 +68,9 @@ pub async fn main() {
     let ipv4 = warp::path!("ipv4" / Ipv4Addr).map(search_ipv4);
     let ipv6 = warp::path!("ipv6" / Ipv6Addr).map(search_ipv6);
 
-    let routes = warp::get().and(warp::path("v0")).and(ipv4.or(ipv6));
+    let routes = warp::get().and(warp::path(API_VERSION)).and(ipv4.or(ipv6));
 
-    println!("Serving on http://{ipv4_target}/v0/");
-    println!("Serving on http://{ipv6_target}/v0/");
-
-    tokio::join!(
-        warp::serve(routes.clone()).run(ipv4_target),
-        warp::serve(routes).run(ipv6_target),
-    );
+    serve!(routes, ipv4_target, ipv6_target);
 }
 
 /// Search an IPv4 address map for an IP address.
