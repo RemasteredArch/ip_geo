@@ -15,6 +15,11 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
+use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    sync::Arc,
+};
+
 use clap::Parser;
 use ip_geo::{country_list::Country, IpAddrMap};
 use serde::Serialize;
@@ -22,11 +27,6 @@ use warp::{
     http::StatusCode,
     reply::{json, with_status, Json, WithStatus},
     Reply,
-};
-
-use std::{
-    net::{Ipv4Addr, Ipv6Addr},
-    sync::Arc,
 };
 
 use warp::Filter;

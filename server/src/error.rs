@@ -16,7 +16,4 @@
 // not, see <https://www.gnu.org/licenses/>.
 
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
-    #[error("invalid IP address & port pair")]
-    InvalidAddrPortPair,
-}
+pub enum Error {}

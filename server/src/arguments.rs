@@ -17,17 +17,13 @@
 // not, see <https://www.gnu.org/licenses/>.
 
 use std::{
-    fmt::Display,
     fs,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr},
+    net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6},
     path::Path,
-    str::FromStr,
 };
 
 use clap::Parser;
 use serde::Deserialize;
-
-use crate::error::Error;
 
 /// Represents the command-line arguments of the program.
 #[derive(Parser, Deserialize, Debug)]
@@ -39,7 +35,7 @@ pub struct Arguments {
 
     #[arg(short = '4', long = "ipv4")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv4_pair: Option<Ipv4PortPair>,
+    pub ipv4_pair: Option<SocketAddrV4>,
 
     #[arg(long = "ipv4-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -55,7 +51,7 @@ pub struct Arguments {
 
     #[arg(short = '6', long = "ipv6")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv6_pair: Option<Ipv6PortPair>,
+    pub ipv6_pair: Option<SocketAddrV6>,
 
     #[arg(long = "ipv6-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -82,10 +78,7 @@ pub fn get_config(arguments: Arguments) -> Arguments {
     let ipv4_pair = arguments
         .ipv4_pair
         .or_else(|| from_config.and_then(|v| v.ipv4_pair))
-        .unwrap_or(Ipv4PortPair {
-            addr: Ipv4Addr::LOCALHOST,
-            port: 26_000,
-        });
+        .unwrap_or(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 26_000));
 
     let ipv4_path = arguments
         .ipv4_path
@@ -104,10 +97,7 @@ pub fn get_config(arguments: Arguments) -> Arguments {
     let ipv6_pair = arguments
         .ipv6_pair
         .or_else(|| from_config.and_then(|v| v.ipv6_pair))
-        .unwrap_or(Ipv6PortPair {
-            addr: Ipv6Addr::LOCALHOST,
-            port: 26_000,
-        });
+        .unwrap_or(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 26_000, 0, 0));
 
     let ipv6_path = arguments
         .ipv6_path
@@ -159,91 +149,4 @@ fn get_default_config_path() -> Box<Path> {
         .join(env!("CARGO_PKG_NAME"))
         .with_extension("toml")
         .into_boxed_path()
-}
-
-#[derive(Debug, Clone, Deserialize, Copy)]
-pub struct AddrPortPair<A: Copy + Display> {
-    pub addr: A,
-    pub port: u16,
-}
-
-impl<A: Copy + Display> AddrPortPair<A> {
-    /// Return the contents of the struct as a tuple of `(addr, port)`.
-    pub fn as_tuple(&self) -> (A, u16) {
-        (self.addr, self.port)
-    }
-}
-
-impl<A: Copy + Display> From<AddrPortPair<A>> for (A, u16) {
-    /// Return the contents of the struct as a tuple of `(addr, port)`.
-    fn from(val: AddrPortPair<A>) -> Self {
-        val.as_tuple()
-    }
-}
-
-pub type Ipv4PortPair = AddrPortPair<Ipv4Addr>;
-
-impl FromStr for Ipv4PortPair {
-    type Err = Error;
-
-    /// Parse an IPv4 address & port pair from a string.
-    ///
-    /// Expects the format of ADDRESS:PORT.
-    /// `127.0.0.1:26000` -> `Self { addr: 127.0.0.1, port: 26000) }`
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // `127.0.0.1:26000` -> (`127.0.0.1`, `26000`)
-        let (addr, port) = s.split_once(':').ok_or(Error::InvalidAddrPortPair)?;
-
-        let addr = Ipv4Addr::from_str(addr).map_err(|_| Error::InvalidAddrPortPair)?;
-        let port = u16::from_str(port).map_err(|_| Error::InvalidAddrPortPair)?;
-
-        Ok(Self { addr, port })
-    }
-}
-
-impl Display for Ipv4PortPair {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.addr, self.port)
-    }
-}
-
-impl From<Ipv4PortPair> for std::net::SocketAddr {
-    fn from(value: Ipv4PortPair) -> Self {
-        Self::new(IpAddr::V4(value.addr), value.port)
-    }
-}
-
-pub type Ipv6PortPair = AddrPortPair<Ipv6Addr>;
-
-impl FromStr for Ipv6PortPair {
-    type Err = Error;
-
-    /// Parse an IPv6 address & port pair from a string.
-    ///
-    /// Expects the format of ADDRESS:PORT.
-    /// `[::1]:26000` -> `Self { addr: ::1, port: 26000) }`
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // `[::1]:26000` -> (`[::1`, `26000`)
-        let (mut addr, port) = s.split_once("]:").ok_or(Error::InvalidAddrPortPair)?;
-
-        // `[::1` -> `::1`
-        addr = addr.strip_prefix('[').ok_or(Error::InvalidAddrPortPair)?;
-
-        let addr = Ipv6Addr::from_str(addr).map_err(|_| Error::InvalidAddrPortPair)?;
-        let port = u16::from_str(port).map_err(|_| Error::InvalidAddrPortPair)?;
-
-        Ok(Self { addr, port })
-    }
-}
-
-impl Display for Ipv6PortPair {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}]:{}", self.addr, self.port)
-    }
-}
-
-impl From<Ipv6PortPair> for std::net::SocketAddr {
-    fn from(value: Ipv6PortPair) -> Self {
-        Self::new(IpAddr::V6(value.addr), value.port)
-    }
 }
