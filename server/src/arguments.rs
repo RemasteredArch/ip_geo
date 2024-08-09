@@ -37,33 +37,33 @@ pub struct Arguments {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv4_pair: Option<SocketAddrV4>,
 
-    #[arg(long = "ipv4-path")]
+    #[arg(long = "ipv4-db-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv4_path: Option<Box<Path>>,
+    pub ipv4_db_path: Option<Box<Path>>,
 
-    #[arg(long = "ipv4-length")]
+    #[arg(long = "ipv4-db-length")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv4_len: Option<usize>,
+    pub ipv4_db_len: Option<usize>,
 
-    #[arg(long = "ipv4-comment")]
+    #[arg(long = "ipv4-db-comment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv4_comment: Option<char>,
+    pub ipv4_db_comment: Option<char>,
 
     #[arg(short = '6', long = "ipv6")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv6_pair: Option<SocketAddrV6>,
 
-    #[arg(long = "ipv6-path")]
+    #[arg(long = "ipv6-db-path")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv6_path: Option<Box<Path>>,
+    pub ipv6_db_path: Option<Box<Path>>,
 
-    #[arg(long = "ipv6-length")]
+    #[arg(long = "ipv6-db-length")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv6_len: Option<usize>,
+    pub ipv6_db_len: Option<usize>,
 
-    #[arg(long = "ipv6-comment")]
+    #[arg(long = "ipv6-db-comment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub ipv6_comment: Option<char>,
+    pub ipv6_db_comment: Option<char>,
 }
 
 /// For a given `Arguments` result from Clap, return `arguments` with defaults inserted.
@@ -80,18 +80,18 @@ pub fn get_config(arguments: Arguments) -> Arguments {
         .or_else(|| from_config.and_then(|v| v.ipv4_pair))
         .unwrap_or(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 26_000));
 
-    let ipv4_path = arguments
-        .ipv4_path
+    let ipv4_db_path = arguments
+        .ipv4_db_path
         .unwrap_or_else(|| Path::new("/usr/share/tor/geoip").into());
 
-    let ipv4_len = arguments
-        .ipv4_len
-        .or_else(|| from_config.and_then(|v| v.ipv4_len))
+    let ipv4_db_len = arguments
+        .ipv4_db_len
+        .or_else(|| from_config.and_then(|v| v.ipv4_db_len))
         .unwrap_or(200_000);
 
-    let ipv4_comment = arguments
-        .ipv4_comment
-        .or_else(|| from_config.and_then(|v| v.ipv4_comment))
+    let ipv4_db_comment = arguments
+        .ipv4_db_comment
+        .or_else(|| from_config.and_then(|v| v.ipv4_db_comment))
         .unwrap_or('#');
 
     let ipv6_pair = arguments
@@ -99,31 +99,31 @@ pub fn get_config(arguments: Arguments) -> Arguments {
         .or_else(|| from_config.and_then(|v| v.ipv6_pair))
         .unwrap_or(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 26_000, 0, 0));
 
-    let ipv6_path = arguments
-        .ipv6_path
-        .or_else(|| from_config.and_then(|v| v.ipv6_path.clone()))
+    let ipv6_db_path = arguments
+        .ipv6_db_path
+        .or_else(|| from_config.and_then(|v| v.ipv6_db_path.clone()))
         .unwrap_or_else(|| Path::new("/usr/share/tor/geoip6").into());
 
-    let ipv6_len = arguments
-        .ipv6_len
-        .or_else(|| from_config.and_then(|v| v.ipv6_len))
+    let ipv6_db_len = arguments
+        .ipv6_db_len
+        .or_else(|| from_config.and_then(|v| v.ipv6_db_len))
         .unwrap_or(60_000);
 
-    let ipv6_comment = arguments
-        .ipv6_comment
-        .or_else(|| from_config.and_then(|v| v.ipv6_comment))
+    let ipv6_db_comment = arguments
+        .ipv6_db_comment
+        .or_else(|| from_config.and_then(|v| v.ipv6_db_comment))
         .unwrap_or('#');
 
     Arguments {
         config_path: Some(config_path),
         ipv4_pair: Some(ipv4_pair),
-        ipv4_path: Some(ipv4_path),
-        ipv4_len: Some(ipv4_len),
-        ipv4_comment: Some(ipv4_comment),
+        ipv4_db_path: Some(ipv4_db_path),
+        ipv4_db_len: Some(ipv4_db_len),
+        ipv4_db_comment: Some(ipv4_db_comment),
         ipv6_pair: Some(ipv6_pair),
-        ipv6_path: Some(ipv6_path),
-        ipv6_len: Some(ipv6_len),
-        ipv6_comment: Some(ipv6_comment),
+        ipv6_db_path: Some(ipv6_db_path),
+        ipv6_db_len: Some(ipv6_db_len),
+        ipv6_db_comment: Some(ipv6_db_comment),
     }
 }
 

@@ -94,9 +94,9 @@ fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>
 /// For a given set of arguments, parse and return the IPv4 database into a clean `IpAddrMap`.
 fn parse_ipv4(arguments: &Arguments) -> IpAddrMap<Ipv4Addr, Country> {
     // Safety: `arguments::get_config()` implements default values
-    let path = arguments.ipv4_path.clone().unwrap();
-    let file_length = arguments.ipv4_len.unwrap();
-    let comment = arguments.ipv4_comment;
+    let path = arguments.ipv4_db_path.clone().unwrap();
+    let file_length = arguments.ipv4_db_len.unwrap();
+    let comment = arguments.ipv4_db_comment;
 
     let mut map = ip_geo::ipv4::parse_ipv4_file(path, file_length, comment);
     map.cleanup();
@@ -107,9 +107,9 @@ fn parse_ipv4(arguments: &Arguments) -> IpAddrMap<Ipv4Addr, Country> {
 /// For a given set of arguments, parse and return the IPv6 database into an `IpAddrMap`.
 fn parse_ipv6(arguments: &Arguments) -> IpAddrMap<Ipv6Addr, Country> {
     // Safety: `arguments::get_config()` implements default values
-    let path = arguments.ipv6_path.clone().unwrap();
-    let file_length = arguments.ipv6_len.unwrap();
-    let comment = arguments.ipv6_comment;
+    let path = arguments.ipv6_db_path.clone().unwrap();
+    let file_length = arguments.ipv6_db_len.unwrap();
+    let comment = arguments.ipv6_db_comment;
 
     let mut map = ip_geo::ipv6::parse_ipv6_file(path, file_length, comment);
     map.cleanup();
