@@ -75,10 +75,8 @@ pub fn get_config(arguments: Arguments) -> Arguments {
     let from_config = get_config_file_arguments(&arguments).and_then(|v| v.ok());
     let from_config = from_config.as_ref();
 
-    // does this need to be read from config file?
     let config_path = arguments
         .config_path
-        .or_else(|| from_config.and_then(|v| v.config_path.clone()))
         .unwrap_or_else(get_default_config_path);
 
     let ipv4_pair = arguments
