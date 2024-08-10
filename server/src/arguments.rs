@@ -65,66 +65,66 @@ pub struct Arguments {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv6_db_comment: Option<char>,
 }
+/*
+( $( ($field:ident, $default:expr) ),+ ),
+$( ($clone_field:ident, $default_fn:expr), )+*/
+macro_rules! inject_defaults {
+    (
+        $arguments:expr,
+        $from_config:expr,
+        [ $( ($field:ident, $default:expr), )+ ],
+        [ $( ($clone_field:ident, $default_fn:expr), )+ ]
+    ) => {
+        $(
+            let $field = $arguments
+                .$field
+                .or_else(|| $from_config.and_then(|v| v.$field))
+                .unwrap_or($default);
+        )+
+
+        $(
+            let $clone_field = $arguments
+                .$clone_field
+                .or_else(|| $from_config.and_then(|v| v.$clone_field.clone()))
+                .unwrap_or_else($default_fn);
+        )+
+
+        Arguments {
+            $(
+                $field: Some($field),
+            )+
+            $(
+                $clone_field: Some($clone_field),
+            )+
+        }
+    };
+}
 
 /// For a given `Arguments` result from Clap, return `arguments` with defaults inserted.
 pub fn get_config(arguments: Arguments) -> Arguments {
     let from_config = get_config_file_arguments(&arguments).and_then(|v| v.ok());
     let from_config = from_config.as_ref();
 
-    let config_path = arguments
-        .config_path
-        .unwrap_or_else(get_default_config_path);
-
-    let ipv4_pair = arguments
-        .ipv4_pair
-        .or_else(|| from_config.and_then(|v| v.ipv4_pair))
-        .unwrap_or(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 26_000));
-
-    let ipv4_db_path = arguments
-        .ipv4_db_path
-        .unwrap_or_else(|| Path::new("/usr/share/tor/geoip").into());
-
-    let ipv4_db_len = arguments
-        .ipv4_db_len
-        .or_else(|| from_config.and_then(|v| v.ipv4_db_len))
-        .unwrap_or(200_000);
-
-    let ipv4_db_comment = arguments
-        .ipv4_db_comment
-        .or_else(|| from_config.and_then(|v| v.ipv4_db_comment))
-        .unwrap_or('#');
-
-    let ipv6_pair = arguments
-        .ipv6_pair
-        .or_else(|| from_config.and_then(|v| v.ipv6_pair))
-        .unwrap_or(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 26_000, 0, 0));
-
-    let ipv6_db_path = arguments
-        .ipv6_db_path
-        .or_else(|| from_config.and_then(|v| v.ipv6_db_path.clone()))
-        .unwrap_or_else(|| Path::new("/usr/share/tor/geoip6").into());
-
-    let ipv6_db_len = arguments
-        .ipv6_db_len
-        .or_else(|| from_config.and_then(|v| v.ipv6_db_len))
-        .unwrap_or(60_000);
-
-    let ipv6_db_comment = arguments
-        .ipv6_db_comment
-        .or_else(|| from_config.and_then(|v| v.ipv6_db_comment))
-        .unwrap_or('#');
-
-    Arguments {
-        config_path: Some(config_path),
-        ipv4_pair: Some(ipv4_pair),
-        ipv4_db_path: Some(ipv4_db_path),
-        ipv4_db_len: Some(ipv4_db_len),
-        ipv4_db_comment: Some(ipv4_db_comment),
-        ipv6_pair: Some(ipv6_pair),
-        ipv6_db_path: Some(ipv6_db_path),
-        ipv6_db_len: Some(ipv6_db_len),
-        ipv6_db_comment: Some(ipv6_db_comment),
-    }
+    inject_defaults!(
+        arguments,
+        from_config,
+        [
+            (ipv4_pair, SocketAddrV4::new(Ipv4Addr::LOCALHOST, 26_000)),
+            (ipv4_db_len, 200_000),
+            (ipv4_db_comment, '#'),
+            (
+                ipv6_pair,
+                SocketAddrV6::new(Ipv6Addr::LOCALHOST, 26_000, 0, 0)
+            ),
+            (ipv6_db_len, 60_000),
+            (ipv6_db_comment, '#'),
+        ],
+        [
+            (config_path, get_default_config_path),
+            (ipv4_db_path, || Path::new("/usr/share/tor/geoip").into()),
+            (ipv6_db_path, || Path::new("/usr/share/tor/geoip6").into()),
+        ]
+    )
 }
 
 /// Read the config file for the program for config values.
