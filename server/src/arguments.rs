@@ -65,9 +65,20 @@ pub struct Arguments {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ipv6_db_comment: Option<char>,
 }
-/*
-( $( ($field:ident, $default:expr) ),+ ),
-$( ($clone_field:ident, $default_fn:expr), )+*/
+
+/// Replaces missing command-line arguments with values pulled from the configuration file or
+/// default values.
+///
+/// # Parameters
+///
+/// 1. `arguments`: an instance of `Arguments` holding command line arguments.
+/// 2. `from-config`: an instance of `Arguments` holding arguments from the configuration file.
+/// 3. A list holding a tuple of:
+///     - `field`: the field from `Arguments` to operate on.
+///     - `default`: the default value if neither the command-line or configuration file give one.
+/// 4. Mostly the same as paramter #3, but:
+///     - `field` is of a type that must be cloned.
+///     - `default` is a function, not a value.
 macro_rules! inject_defaults {
     (
         $arguments:expr,
@@ -75,26 +86,22 @@ macro_rules! inject_defaults {
         [ $( ($field:ident, $default:expr), )+ ],
         [ $( ($clone_field:ident, $default_fn:expr), )+ ]
     ) => {
-        $(
-            let $field = $arguments
-                .$field
-                .or_else(|| $from_config.and_then(|v| v.$field))
-                .unwrap_or($default);
-        )+
-
-        $(
-            let $clone_field = $arguments
-                .$clone_field
-                .or_else(|| $from_config.and_then(|v| v.$clone_field.clone()))
-                .unwrap_or_else($default_fn);
-        )+
-
         Arguments {
             $(
-                $field: Some($field),
+                $field: Some(
+                    $arguments
+                        .$field
+                        .or_else(|| $from_config.and_then(|v| v.$field))
+                        .unwrap_or($default)
+                ),
             )+
             $(
-                $clone_field: Some($clone_field),
+                $clone_field: Some(
+                    $arguments
+                        .$clone_field
+                        .or_else(|| $from_config.and_then(|v| v.$clone_field.clone()))
+                        .unwrap_or_else($default_fn)
+                ),
             )+
         }
     };
