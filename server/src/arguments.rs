@@ -79,7 +79,7 @@ pub struct Arguments {
 /// 4. Mostly the same as paramter #3, but:
 ///     - `field` is of a type that must be cloned.
 ///     - `default` is a function, not a value.
-macro_rules! inject_defaults {
+macro_rules! fill_missing_arguments {
     (
         $arguments:expr,
         $from_config:expr,
@@ -112,7 +112,7 @@ pub fn get_config(arguments: Arguments) -> Arguments {
     let from_config = get_config_file_arguments(&arguments).and_then(|v| v.ok());
     let from_config = from_config.as_ref();
 
-    inject_defaults!(
+    fill_missing_arguments!(
         arguments,
         from_config,
         [
