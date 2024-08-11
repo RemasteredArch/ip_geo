@@ -16,4 +16,13 @@
 // not, see <https://www.gnu.org/licenses/>.
 
 #[derive(thiserror::Error, Debug)]
-pub enum Error {}
+pub enum Error {
+    #[error("failed to deserialize TOML data")]
+    TomlDeserialize(#[from] toml::de::Error),
+
+    #[error("failed to perform I/O action")]
+    Io(#[from] std::io::Error),
+
+    #[error("no configuration directory available on platform")]
+    NoConfigDir,
+}

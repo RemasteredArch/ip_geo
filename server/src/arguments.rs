@@ -25,6 +25,8 @@ use std::{
 use clap::Parser;
 use serde::Deserialize;
 
+use crate::error::Error;
+
 /// Represents the command-line arguments of the program.
 #[derive(Parser, Deserialize, Debug)]
 #[command(about, version, long_about = None)]
@@ -72,13 +74,30 @@ pub struct Arguments {
 /// # Parameters
 ///
 /// 1. `arguments`: an instance of `Arguments` holding command line arguments.
-/// 2. `from-config`: an instance of `Arguments` holding arguments from the configuration file.
+/// 2. `from_config`: an instance of `Option<&Arguments>` that might hold arguments from a
+///    configuration file.
 /// 3. A list holding a tuple of:
 ///     - `field`: the field from `Arguments` to operate on.
 ///     - `default`: the default value if neither the command-line or configuration file give one.
 /// 4. Mostly the same as paramter #3, but:
 ///     - `field` is of a type that must be cloned.
 ///     - `default` is a function, not a value.
+///
+/// # Examples
+///
+/// **Note:** to keep documentation concise, this is not a compiling example.
+///
+/// ```ignore
+/// let arguments: Arguments = ...;
+/// let from_config: Option<&Arguments> = (...).as_ref();
+///
+/// let filled_arguments = fill_missing_arguments!(
+///     arguments,
+///     from_config,
+///     [(ipv4_pair, SocketAddrV4::new(Ipv4Addr::LOCALHOST, 26_000))],
+///     [(ipv4_db_path, || Path::new("/usr/share/tor/geoip").into())]
+/// );
+/// ```
 macro_rules! fill_missing_arguments {
     (
         $arguments:expr,
@@ -86,9 +105,9 @@ macro_rules! fill_missing_arguments {
         [ $( ($field:ident, $default:expr), )+ ],
         [ $( ($clone_field:ident, $default_fn:expr), )+ ]
     ) => {
-        Arguments {
+        $crate::arguments::Arguments {
             $(
-                $field: Some(
+                $field: ::std::option::Option::Some(
                     $arguments
                         .$field
                         .or_else(|| $from_config.and_then(|v| v.$field))
@@ -96,7 +115,7 @@ macro_rules! fill_missing_arguments {
                 ),
             )+
             $(
-                $clone_field: Some(
+                $clone_field: ::std::option::Option::Some(
                     $arguments
                         .$clone_field
                         .or_else(|| $from_config.and_then(|v| v.$clone_field.clone()))
@@ -109,7 +128,7 @@ macro_rules! fill_missing_arguments {
 
 /// For a given `Arguments` result from Clap, return `arguments` with defaults inserted.
 pub fn get_config(arguments: Arguments) -> Arguments {
-    let from_config = get_config_file_arguments(&arguments).and_then(|v| v.ok());
+    let from_config = get_config_file_arguments(&arguments).ok();
     let from_config = from_config.as_ref();
 
     fill_missing_arguments!(
@@ -137,22 +156,26 @@ pub fn get_config(arguments: Arguments) -> Arguments {
 /// Read the config file for the program for config values.
 ///
 /// Values from the config file override defaults, but are overridden by command-line arguments.
-fn get_config_file_arguments(arguments: &Arguments) -> Option<Result<Arguments, toml::de::Error>> {
+fn get_config_file_arguments(arguments: &Arguments) -> Result<Arguments, Error> {
     let config_path = arguments
         .config_path
         .clone()
         .unwrap_or_else(get_default_config_path);
 
-    let contents = fs::read_to_string(&config_path).ok()?;
-    Some(toml::from_str(&contents))
+    let contents = fs::read_to_string(&config_path)?;
+    Ok(toml::from_str(&contents)?)
 }
 
 /// Return the default location for the configuration file.
 ///
 /// Should be overriden by the command-line argument, if provided by the user.
+///
+/// # Panics
+///
+/// Panics if run on a platform without a standard configuration directory (if not MacOS, Windows, or Linux).
 fn get_default_config_path() -> Box<Path> {
     dirs::config_dir()
-        .expect("An OS-specific config directory")
+        .expect("an OS-specific config directory")
         .join(env!("CARGO_PKG_NAME"))
         .with_extension("toml")
         .into_boxed_path()
