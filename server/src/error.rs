@@ -22,7 +22,4 @@ pub enum Error {
 
     #[error("failed to perform I/O action")]
     Io(#[from] std::io::Error),
-
-    #[error("no configuration directory available on platform")]
-    NoConfigDir,
 }

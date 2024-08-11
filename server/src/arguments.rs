@@ -83,6 +83,8 @@ pub struct Arguments {
 ///     - `field` is of a type that must be cloned.
 ///     - `default` is a function, not a value.
 ///
+/// Trailing commas are optional.
+///
 /// # Examples
 ///
 /// **Note:** to keep documentation concise, this is not a compiling example.
@@ -102,8 +104,8 @@ macro_rules! fill_missing_arguments {
     (
         $arguments:expr,
         $from_config:expr,
-        [ $( ($field:ident, $default:expr), )+ ],
-        [ $( ($clone_field:ident, $default_fn:expr), )+ ]
+        [ $( ( $field:ident, $default:expr $(,)? ) ),+  $(,)? ],
+        [ $( ( $clone_field:ident, $default_fn:expr $(,)? ) ),+  $(,)?] $(,)?
     ) => {
         $crate::arguments::Arguments {
             $(
@@ -143,12 +145,12 @@ pub fn get_config(arguments: Arguments) -> Arguments {
                 SocketAddrV6::new(Ipv6Addr::LOCALHOST, 26_000, 0, 0)
             ),
             (ipv6_db_len, 60_000),
-            (ipv6_db_comment, '#'),
+            (ipv6_db_comment, '#')
         ],
         [
             (config_path, get_default_config_path),
             (ipv4_db_path, || Path::new("/usr/share/tor/geoip").into()),
-            (ipv6_db_path, || Path::new("/usr/share/tor/geoip6").into()),
+            (ipv6_db_path, || Path::new("/usr/share/tor/geoip6").into())
         ]
     )
 }
