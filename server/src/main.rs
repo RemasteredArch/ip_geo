@@ -15,134 +15,33 @@
 // You should have received a copy of the GNU Affero General Public License along with ip_geo. If
 // not, see <https://www.gnu.org/licenses/>.
 
-use std::{
-    net::{Ipv4Addr, Ipv6Addr},
-    sync::Arc,
-};
-
 use clap::Parser;
-use ip_geo::{country_list::Country, IpAddrMap};
-use serde::Serialize;
-use warp::{
-    http::StatusCode,
-    reply::{json, with_status, Json, WithStatus},
-    Reply,
-};
 
-/// For a give Warp routes map, and a list of target `SocketAddr`s, print the targets and serve the
-/// routes on them.
-macro_rules! serve {
-    ( $routes:expr, $( $target:expr ),+ ) => {
-        ::tokio::join!(
-            $({
-                println!("Serving on http://{}/{API_VERSION}/", $target);
-                ::warp::serve($routes.clone()).run($target)
-            }),+
-        );
-    };
-}
-
-use warp::Filter;
+#[macro_use]
+mod api;
 
 mod arguments;
 use arguments::Arguments;
 
 mod error;
 
-static API_VERSION: &str = "v0";
+mod parse;
 
 #[tokio::main]
 pub async fn main() {
+    // Parse options
     let arguments = arguments::get_config(Arguments::parse());
 
     // Safety: `arguments::get_config()` implements default values
     let ipv4_target = arguments.ipv4_pair.unwrap();
     let ipv6_target = arguments.ipv6_pair.unwrap();
 
-    let ipv4_map = Arc::new(parse_ipv4(&arguments));
-    let ipv6_map = Arc::new(parse_ipv6(&arguments));
+    // Parse databases
+    let maps = parse::parse_ip_maps(&arguments);
 
-    let search_ipv4 = move |ipv4_addr: Ipv4Addr| search_clean_ip_map(ipv4_addr, &ipv4_map);
-    let search_ipv6 = move |ipv6_addr: Ipv6Addr| search_clean_ip_map(ipv6_addr, &ipv6_map);
+    // Construct routes
+    let routes = api::get_routes(maps);
 
-    let ipv4 = warp::path!("ipv4" / Ipv4Addr).map(search_ipv4);
-    let ipv6 = warp::path!("ipv6" / Ipv6Addr).map(search_ipv6);
-
-    let routes = warp::get().and(warp::path(API_VERSION)).and(ipv4.or(ipv6));
-
+    // Serve routes
     serve!(routes, ipv4_target, ipv6_target);
-}
-
-/// Search an IPv4 address map for an IP address.
-///
-/// Assumes that the `IpAddrMap` is clean, otherwise it return an internal server error (code 500).
-fn search_clean_ip_map<A: Ord + Copy>(ip_addr: A, ip_map: &IpAddrMap<A, Country>) -> impl Reply {
-    fn success(country: &Country) -> WithStatus<Json> {
-        json_with_status(country, StatusCode::OK)
-    }
-
-    fn error(error: ip_geo::Error) -> WithStatus<Json> {
-        match error {
-            ip_geo::Error::NoValueFound => json_str_error(
-                "no country associated with IP address",
-                StatusCode::NOT_FOUND,
-            ),
-            _ => {
-                eprintln!("Error 500: request resulted in error: '{error}'");
-                json_str_error(&error.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
-            }
-        }
-    }
-
-    match ip_map.try_search(ip_addr) {
-        Ok(country) => success(country),
-        Err(err) => error(err),
-    }
-}
-
-/// For a given set of arguments, parse and return the IPv4 database into a clean `IpAddrMap`.
-fn parse_ipv4(arguments: &Arguments) -> IpAddrMap<Ipv4Addr, Country> {
-    // Safety: `arguments::get_config()` implements default values
-    let path = arguments.ipv4_db_path.clone().unwrap();
-    let file_length = arguments.ipv4_db_len.unwrap();
-    let comment = arguments.ipv4_db_comment;
-
-    let mut map = ip_geo::ipv4::parse_ipv4_file(path, file_length, comment);
-    map.cleanup();
-
-    map
-}
-
-/// For a given set of arguments, parse and return the IPv6 database into an `IpAddrMap`.
-fn parse_ipv6(arguments: &Arguments) -> IpAddrMap<Ipv6Addr, Country> {
-    // Safety: `arguments::get_config()` implements default values
-    let path = arguments.ipv6_db_path.clone().unwrap();
-    let file_length = arguments.ipv6_db_len.unwrap();
-    let comment = arguments.ipv6_db_comment;
-
-    let mut map = ip_geo::ipv6::parse_ipv6_file(path, file_length, comment);
-    map.cleanup();
-
-    map
-}
-
-/// Returns a JSON reply with a given status.
-///
-/// Returns JSON in the format of:
-///
-/// ```json
-/// {"error":"example error text"}
-/// ```
-fn json_str_error(error: &str, code: StatusCode) -> WithStatus<Json> {
-    #[derive(Serialize)]
-    struct SerializableError<'s> {
-        error: &'s str,
-    }
-
-    json_with_status(&SerializableError { error }, code)
-}
-
-/// Returns a JSON reply with the given contents and status code.
-fn json_with_status(contents: &impl Serialize, code: StatusCode) -> WithStatus<Json> {
-    with_status(json(contents), code)
 }
